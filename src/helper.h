@@ -20,10 +20,26 @@
 **
 ****************************************************************************/
 
-#include "helper.h"
-#include "sign.h"
+#ifndef HELPER_H
+#define HELPER_H
 
-void app_main(void)
-{
-	init_sign();
-}
+#include "esp_check.h"
+
+typedef uint8_t u8;
+
+#define FIELD_TYPEOF(t, f) typeof(((t *)0)->f)
+
+#define error_esp(t, f, ...) \
+	ESP_LOGE(t, "%s(%d): " f, __FUNCTION__, __LINE__, ##__VA_ARGS__)
+
+/* report on error (esp family) */
+#define ROE_ESP(c, t)						\
+	({							\
+		esp_err_t r = c;				\
+		if (unlikely(r != ESP_OK)) {			\
+			error_esp(t, "%s", esp_err_to_name(r));	\
+		}						\
+		unlikely(r != ESP_OK);				\
+	})
+
+#endif /* HELPER_H */

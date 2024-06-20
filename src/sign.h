@@ -20,10 +20,9 @@
 **
 ****************************************************************************/
 
-#include "helper.h"
-#include "sign.h"
+#ifndef SIGN_H
+#define SIGN_H
 
-void app_main(void)
-{
-	init_sign();
-}
+int init_sign(void);
+
+#endif /* SIGN_H */

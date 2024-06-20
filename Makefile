@@ -1,6 +1,6 @@
 MAKEFLAGS += --no-print-directory
 
-.PHONY: build env flash clean distclean
+.PHONY: build env flash clean distclean monitor
 
 build:
 	idf.py build
@@ -17,3 +17,6 @@ clean:
 
 distclean:
 	idf.py fullclean
+
+monitor:
+	idf.py monitor

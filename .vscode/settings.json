@@ -12,6 +12,10 @@
 		".gdb*": "plaintext",
 		"README": "plaintext",
 		"stdio.h": "c",
-		"regex": "c"
+		"regex": "c",
+		"*.tcc": "c",
+		"format": "c",
+		"thread": "c",
+		"esp_check.h": "c"
 	}
 }
