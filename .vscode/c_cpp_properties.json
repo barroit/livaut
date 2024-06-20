@@ -1,0 +1,19 @@
+{
+	"configurations": [
+		{
+			"name": "xtensa-esp32-elf-gcc",
+			"includePath": [
+				"${default}",
+				"${workspaceFolder}/src/**",
+				// Unfortunately, we didn't find a way to
+				// make vscode run export.sh when its session
+				// starts. $IDF_PATH is not defined, the only
+				// solution is to specify path manually
+				"${HOME}/Source/esp-idf/components/**"
+			],
+			"cStandard": "gnu17",
+			"compilerPath": "${HOME}/.espressif/tools/xtensa-esp-elf/esp-13.2.0_20230928/xtensa-esp-elf/bin/xtensa-esp32-elf-gcc"
+		}
+	],
+	"version": 4
+}
