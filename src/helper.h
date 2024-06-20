@@ -26,20 +26,25 @@
 #include "esp_check.h"
 
 typedef uint8_t u8;
+typedef uint16_t u16;
 
 #define FIELD_TYPEOF(t, f) typeof(((t *)0)->f)
 
-#define error_esp(t, f, ...) \
-	ESP_LOGE(t, "%s(%d): " f, __FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define error(t, f, ...) \
+	ESP_LOGE(t, f, ##__VA_ARGS__)
+
+#define warning(t, f, ...) \
+	ESP_LOGW(t, f, ##__VA_ARGS__)
 
 /* report on error (esp family) */
 #define ROE_ESP(c, t)						\
 	({							\
 		esp_err_t r = c;				\
-		if (unlikely(r != ESP_OK)) {			\
-			error_esp(t, "%s", esp_err_to_name(r));	\
-		}						\
-		unlikely(r != ESP_OK);				\
+		if (r >= 0 && r != ESP_OK)			\
+			error(t, "%s", esp_err_to_name(r));	\
+		r != ESP_OK;					\
 	})
+
+#define for_each_idx(i, n) for (i = 0; i < n; i++)
 
 #endif /* HELPER_H */

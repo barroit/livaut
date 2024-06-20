@@ -23,6 +23,8 @@
 #ifndef SIGN_H
 #define SIGN_H
 
-int init_sign(void);
+esp_err_t init_sign(void);
+
+esp_err_t show_sign(u8 code);
 
 #endif /* SIGN_H */
