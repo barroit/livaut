@@ -23,7 +23,7 @@
 #include "i2c-bus.h"
 #include "helper.h"
 
-#define I2C_MASTER_PORT   I2C_NUM_1
+#define I2C_MASTER_PORT   I2C_NUM_0
 #define I2C_MASTER_SCL_IO 22
 #define I2C_MASTER_SDA_IO 21
 
@@ -31,17 +31,11 @@ static i2c_master_bus_handle_t mst_bus;
 
 esp_err_t init_mst_bus(void)
 {
-	if (mst_bus) {
-		warning("bus_init",
-			 "init_mst_bus_handle() called more than once");
-		return -1;
-	}
-
 	FIELD_TYPEOF(i2c_master_bus_config_t, flags) flag = {
 		.enable_internal_pullup = true,
 	};
 
-	i2c_master_bus_config_t config = {
+	i2c_master_bus_config_t conf = {
 		.clk_source        = I2C_CLK_SRC_DEFAULT,
 		.i2c_port          = I2C_MASTER_PORT,
 		.scl_io_num        = I2C_MASTER_SCL_IO,
@@ -50,7 +44,7 @@ esp_err_t init_mst_bus(void)
 		.flags             = flag,
 	};
 
-	return i2c_new_master_bus(&config, &mst_bus);
+	return ROE_ESP(i2c_new_master_bus(&conf, &mst_bus), "bus_init");
 }
 
 i2c_master_bus_handle_t get_mst_bus(void)
@@ -61,4 +55,20 @@ i2c_master_bus_handle_t get_mst_bus(void)
 void dsty_mst_bus(void)
 {
 	i2c_del_master_bus(mst_bus);
+	mst_bus = NULL;
+}
+
+#define DEVSCAN "dev_scan"
+
+void bus_dev_scan_7bit(void)
+{
+	u16 addr;
+
+	ESP_LOGI(DEVSCAN, "scanning master bus...");
+	for_each_idx(addr, 0x7F) {
+		if (i2c_master_probe(mst_bus, addr, 100) == ESP_OK) {
+			ESP_LOGI(DEVSCAN, "found device at 0x%02x", addr);
+		}
+	}
+	ESP_LOGI(DEVSCAN, "scanning done");
 }

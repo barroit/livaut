@@ -31,6 +31,6 @@ i2c_master_bus_handle_t get_mst_bus(void);
 
 void dsty_mst_bus(void);
 
-void mst_bus_scan(void);
+void bus_dev_scan_7bit(void);
 
 #endif /* I2C_BUS_H */

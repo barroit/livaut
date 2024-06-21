@@ -23,28 +23,20 @@
 #include "helper.h"
 #include "i2c-bus.h"
 #include "sign.h"
-
-/* just for fun ;) */
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-void fn(void)
-{
-	u8 sign = 0xAA;
-
-	while (true) {
-		show_sign((sign = ~sign));
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
-	}
-}
+#include "ir.h"
 
 void app_main(void)
 {
-	if (ROE_ESP(init_mst_bus(), "i2c_bus"))
-		goto schedule_task;
+	// if (init_mst_bus())
+	// 	goto schedule_task;
 
-	if (ROE_ESP(init_sign(), "sign_init"))
-		dsty_mst_bus();
+	// bus_dev_scan_7bit();
 
-schedule_task:
-	fn();
+	// if (init_sign())
+	// 	dsty_mst_bus();
+
+// schedule_task:
+	init_ir();
+	
+	wait_ir_sig();
 }

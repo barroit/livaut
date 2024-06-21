@@ -25,6 +25,9 @@
 
 esp_err_t init_sign(void);
 
+/**
+ * plot sign, this function can be used anywhere
+ */
 esp_err_t show_sign(u8 code);
 
 #endif /* SIGN_H */

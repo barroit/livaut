@@ -33,6 +33,11 @@
 		"i2c.h": "c",
 		"i2c_private.h": "c",
 		"task.h": "c",
-		"freertos.h": "c"
+		"freertos.h": "c",
+		"receiver.h": "c",
+		"gpio.h": "c",
+		"ir.h": "c",
+		"queue.h": "c",
+		"esp_err.h": "c"
 	}
 }

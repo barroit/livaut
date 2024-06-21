@@ -20,31 +20,15 @@
 **
 ****************************************************************************/
 
-#include "i2c-bus.h"
-#include "helper.h"
+#ifndef IR_H
+#define IR_H
 
-#define PCF8574_ADDR 0x20
-#define SCL_SPEED    100000
+#include "esp_err.h"
 
-static i2c_master_dev_handle_t pcf8574;
+#define TSOP_PIN GPIO_NUM_19
 
-esp_err_t init_sign(void)
-{
-	i2c_master_bus_handle_t bus = get_mst_bus();
-	i2c_device_config_t conf = {
-		.dev_addr_length = I2C_ADDR_BIT_LEN_7,
-		.device_address  = PCF8574_ADDR,
-		.scl_speed_hz    = SCL_SPEED,
-	};
+esp_err_t init_ir(void);
 
-	return ROE_ESP(i2c_master_bus_add_device(bus, &conf, &pcf8574),
-			"sign_init");
-}
+void wait_ir_sig(void);
 
-esp_err_t show_sign(u8 code)
-{
-	if (!pcf8574 || !get_mst_bus())
-		return -1;
-
-	return i2c_master_transmit(pcf8574, &code, 1, -1);
-}
+#endif /* IR_H */

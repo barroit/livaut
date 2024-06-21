@@ -25,8 +25,11 @@
 
 #include "esp_check.h"
 
-typedef uint8_t u8;
+typedef uint8_t  u8;
 typedef uint16_t u16;
+typedef uint32_t u32;
+
+#define fixed_growth(x) (((x + 16) * 3) / 2)
 
 #define FIELD_TYPEOF(t, f) typeof(((t *)0)->f)
 
@@ -36,14 +39,19 @@ typedef uint16_t u16;
 #define warning(t, f, ...) \
 	ESP_LOGW(t, f, ##__VA_ARGS__)
 
+#define info(t, f, ...) \
+	ESP_LOGI(t, f, ##__VA_ARGS__)
+
 /* report on error (esp family) */
 #define ROE_ESP(c, t)						\
 	({							\
 		esp_err_t r = c;				\
-		if (r >= 0 && r != ESP_OK)			\
+		if (r != ESP_OK)				\
 			error(t, "%s", esp_err_to_name(r));	\
-		r != ESP_OK;					\
+		r;						\
 	})
+
+#define PINMASK(p) (1ULL << (p))
 
 #define for_each_idx(i, n) for (i = 0; i < n; i++)
 
