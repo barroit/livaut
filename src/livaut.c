@@ -21,9 +21,9 @@
 ****************************************************************************/
 
 #include "helper.h"
-#include "i2c-bus.h"
+#include "bus.h"
 #include "sign.h"
-#include "ir.h"
+#include "transceiver.h"
 
 void app_main(void)
 {
@@ -36,7 +36,7 @@ void app_main(void)
 	// 	dsty_mst_bus();
 
 // schedule_task:
-	init_ir();
-	
-	wait_ir_sig();
+	deploy_rx_channel();
+
+	// wait_ir_sig();
 }

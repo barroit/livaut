@@ -38,6 +38,9 @@
 		"gpio.h": "c",
 		"ir.h": "c",
 		"queue.h": "c",
-		"esp_err.h": "c"
+		"esp_err.h": "c",
+		"transceiver.h": "c",
+		"rmt_rx.h": "c",
+		"stdbool.h": "c"
 	}
 }

@@ -20,7 +20,7 @@
 **
 ****************************************************************************/
 
-#include "i2c-bus.h"
+#include "bus.h"
 #include "helper.h"
 
 #define PCF8574_ADDR 0x20

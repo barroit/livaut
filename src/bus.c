@@ -20,7 +20,7 @@
 **
 ****************************************************************************/
 
-#include "i2c-bus.h"
+#include "bus.h"
 #include "helper.h"
 
 #define I2C_MASTER_PORT   I2C_NUM_0

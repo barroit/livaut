@@ -20,15 +20,11 @@
 **
 ****************************************************************************/
 
-#ifndef IR_H
-#define IR_H
+#ifndef TRANSCEIVER_H
+#define TRANSCEIVER_H
 
-#include "esp_err.h"
+void deploy_rx_channel(void);
 
-#define TSOP_PIN GPIO_NUM_19
+void destroy_rx_channel(void);
 
-esp_err_t init_ir(void);
-
-void wait_ir_sig(void);
-
-#endif /* IR_H */
+#endif /* TRANSCEIVER_H */
