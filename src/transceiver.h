@@ -25,6 +25,8 @@
 
 void deploy_rx_channel(void);
 
+void receive_symbol_step(void);
+
 void destroy_rx_channel(void);
 
 #endif /* TRANSCEIVER_H */

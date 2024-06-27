@@ -32,23 +32,25 @@
 
 #define CH_CLOCK_RES   1000000 /* channel clock resolution */
 #define CH_CLOCK_SRC   RMT_CLK_SRC_DEFAULT
-#define CH_MEMBLK_SIZE 64
+#define CH_MEMBLK_SIZE 256
 
 #define RX_GPIO GPIO_NUM_19
-#define RX_FREQ 25000	/**
-			 * for RX channel, we should not set the carrier
-			 * frequency exactly to the theoretical value due to
-			 * reflection and refraction occur when a signal
-			 * travels through the air
-			 */
-#define RX_DUTY 0.33
-#define RX_ONLL false /* active on low level */
 
-/* T: 350μs ~ 500μs (425μs typ.) */
-#define SIG_MINTHOLD 100000  /* bit '0': 1T + 1T > 100000nm */
-#define SIG_MAXTHOLD 8000000 /* repeat:  8T + 8T < 8000000nm */
+/**
+ * for AEHA format
+ * time unit: 350μs ~ 500μs (425μs typ.)
+ * bit '0':   1T + 1T
+ * repreat:   8T + 8T
+ */
+#define SIG_MINTHOLD 1250    /* bit ‘0’ > 1250nm */
+#define SIG_MAXTHOLD 8000000 /* repreat < 8000000nm */
 
-#define SYMBUF_SIZE 64
+#define SYMBUF_SIZE 256
+
+/**
+ * we will receive 162 (168 total) symbols from リモコン arc478a78
+ */
+#define VALID_FRAMES 162
 
 static rmt_channel_handle_t rx_channel;
 static QueueHandle_t incoming_symbols;
@@ -70,20 +72,29 @@ static bool receive_frame(rmt_channel_handle_t _, /* rx channel */
 			  void *ctx)
 {
 	BaseType_t unblk;
-	QueueHandle_t que = (QueueHandle_t)ctx;
 
-	xQueueSendFromISR(que, syms, &unblk);
+	xQueueSendFromISR(ctx, syms, &unblk);
 	return unblk;
 }
 
 static void decode_symbol(rmt_symbol_word_t *sym)
 {
-	//
+	// do stuff...
 }
 
-static void decode_symbols(rmt_symbol_word_t *syms, size_t n)
+static inline bool is_valid_frame(size_t n)
 {
-	//
+	return n == VALID_FRAMES;
+}
+
+static void decode_symbol_entries(rmt_symbol_word_t *syms, size_t n)
+{
+	if (is_valid_frame(n)) {
+		size_t i;
+
+		for_each_idx(i, n)
+			decode_symbol(&syms[i]);
+	}		
 }
 
 void deploy_rx_channel(void)
@@ -94,15 +105,17 @@ void deploy_rx_channel(void)
 		.on_recv_done = receive_frame,
 	};
 
+	incoming_symbols = xQueueCreate(8, sizeof(rmt_rx_done_event_data_t));
+
 	S_(rmt_rx_register_event_callbacks(rx_channel, &cb, incoming_symbols));
 
 	S_(rmt_enable(rx_channel));
 }
 
-static void receive_symbol_step(void)
+void receive_symbol_step(void)
 {
 	rmt_symbol_word_t symbuf[SYMBUF_SIZE];
-	rmt_rx_done_event_data_t evdt;
+	rmt_rx_done_event_data_t evt;
 	rmt_receive_config_t cfg = {
 		.signal_range_min_ns = SIG_MINTHOLD,
 		.signal_range_max_ns = SIG_MAXTHOLD,
@@ -111,10 +124,10 @@ static void receive_symbol_step(void)
 	S_(rmt_receive(rx_channel, symbuf, sizeof(symbuf), &cfg));
 
 	while (39) {
-		if (!xQueueReceive(incoming_symbols, &evdt, portMAX_DELAY))
+		if (!xQueueReceive(incoming_symbols, &evt, portMAX_DELAY))
 			continue;
 
-		decode_symbols(evdt.received_symbols, evdt.num_symbols);
+		decode_symbol_entries(evt.received_symbols, evt.num_symbols);
 
 		S_(rmt_receive(rx_channel, symbuf, sizeof(symbuf), &cfg));
 	}
@@ -124,6 +137,8 @@ void destroy_rx_channel(void)
 {
 	S_(rmt_disable(rx_channel));
 	S_(rmt_del_channel(rx_channel));
+
+	vQueueDelete(incoming_symbols);
 
 	rx_channel = NULL;
 }

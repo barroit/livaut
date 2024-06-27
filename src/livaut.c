@@ -38,5 +38,7 @@ void app_main(void)
 // schedule_task:
 	deploy_rx_channel();
 
+	receive_symbol_step();
+
 	// wait_ir_sig();
 }
