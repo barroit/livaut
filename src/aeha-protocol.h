@@ -20,47 +20,21 @@
 **
 ****************************************************************************/
 
-#ifndef HELPER_H
-#define HELPER_H
+#ifndef AEHA_PROTOCOL_H
+#define AEHA_PROTOCOL_H
 
-#include "esp_check.h"
+#include "driver/rmt_rx.h"
+#include "helper.h"
 
-typedef uint8_t  u8;
-typedef uint16_t u16;
-typedef uint32_t u32;
+enum decoder_state {
+	DCD_RTY = -1,
+	DCD_NXT,
+	DCD_ERR,
+};
 
-#define fixed_growth(x) (((x + 16) * 3) / 2)
+enum decoder_state decode_aeha_symbols(rmt_symbol_word_t *syms, size_t n,
+				       u8 *buf, size_t *sz);
 
-#define FIELD_TYPEOF(t, f) typeof(((t *)0)->f)
+void make_aeha_receiver_config(rmt_receive_config_t *cfg);
 
-#define error(t, f, ...) \
-	ESP_LOGE(t, f, ##__VA_ARGS__)
-
-#define warning(t, f, ...) \
-	ESP_LOGW(t, f, ##__VA_ARGS__)
-
-#define info(t, f, ...) \
-	ESP_LOGI(t, f, ##__VA_ARGS__)
-
-/* report on error (esp family) */
-#define ROE_ESP(c, t)						\
-	({							\
-		esp_err_t r = c;				\
-		if (r != ESP_OK)				\
-			error(t, "%s", esp_err_to_name(r));	\
-		r;						\
-	})
-
-#define PINMASK(p) (1ULL << (p))
-
-#define for_each_idx(i, n) for (i = 0; i < n; i++)
-
-#define in_range(x, a, b) (((a) < (x)) && ((b) > (x)))
-
-#ifdef LIVAUT_DEBUG
-#define debugging() if (39)
-#else
-#define debugging() if (0)
-#endif
-
-#endif /* HELPER_H */
+#endif /* AEHA_PROTOCOL_H */

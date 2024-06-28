@@ -22,11 +22,13 @@
 
 #include <stdbool.h>
 #include "transceiver.h"
-#include "driver/rmt_rx.h"
-#include "helper.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
+#include "convert-data.h"
+#include "aeha-protocol.h"
+#include <string.h>
+#include "sign.h"
 
 #define S_ ESP_ERROR_CHECK /* alias */
 
@@ -36,21 +38,7 @@
 
 #define RX_GPIO GPIO_NUM_19
 
-/**
- * for AEHA format
- * time unit: 350μs ~ 500μs (425μs typ.)
- * bit '0':   1T + 1T
- * repreat:   8T + 8T
- */
-#define SIG_MINTHOLD 1250    /* bit ‘0’ > 1250nm */
-#define SIG_MAXTHOLD 8000000 /* repreat < 8000000nm */
-
-#define SYMBUF_SIZE 256
-
-/**
- * we will receive 162 (168 total) symbols from リモコン arc478a78
- */
-#define VALID_FRAMES 162
+#define BUFFER_SIZE 256
 
 static rmt_channel_handle_t rx_channel;
 static QueueHandle_t incoming_symbols;
@@ -77,26 +65,6 @@ static bool receive_frame(rmt_channel_handle_t _, /* rx channel */
 	return unblk;
 }
 
-static void decode_symbol(rmt_symbol_word_t *sym)
-{
-	// do stuff...
-}
-
-static inline bool is_valid_frame(size_t n)
-{
-	return n == VALID_FRAMES;
-}
-
-static void decode_symbol_entries(rmt_symbol_word_t *syms, size_t n)
-{
-	if (is_valid_frame(n)) {
-		size_t i;
-
-		for_each_idx(i, n)
-			decode_symbol(&syms[i]);
-	}		
-}
-
 void deploy_rx_channel(void)
 {
 	install_rx_channel();
@@ -112,24 +80,88 @@ void deploy_rx_channel(void)
 	S_(rmt_enable(rx_channel));
 }
 
+static void fprint_autowrap(const char *pfx, size_t wrap,
+			    const char *txt, FILE *stream)
+{
+	size_t pfxlen = strlen(pfx), txtlen = strlen(txt), len = pfxlen;
+
+	/* usually ‘pfx’ will not exceed ‘wrap’ */
+	fputs(pfx, stream);
+
+	while (39) {
+		size_t room = wrap - len;
+
+		fprintf(stream, "%.*s\n", (int)room, txt);
+
+		if (txtlen <= room)
+			break;
+
+		txt += room;
+		txtlen -= room;
+		len = fprintf(stream, "%*s", (int)pfxlen, "");
+	}
+}
+
+#define print_autowrap(p, w, t) fprint_autowrap(p, w, t, stdout);
+
+static void show_signal(const u8 *buf, size_t sz)
+{
+	char hexstr[bit_size_to_hex_size(BUFFER_SIZE)];
+	char bitstr[BUFFER_SIZE];
+
+	bit_arr_to_hex_str_lsb(buf, sz, hexstr);
+	bit_arr_to_bit_str(buf, sz, bitstr);
+
+	print_autowrap("bin: ", 80, bitstr);
+	print_autowrap("hex: ", 80, hexstr);
+
+	putchar('\n');
+
+	fflush(stdout);
+}
+
+static int do_receive_symbol(rmt_symbol_word_t *symbuf, size_t sbsz,
+			     rmt_receive_config_t *cfg, u8 *sign)
+{
+	rmt_rx_done_event_data_t data;
+	u8 buf[BUFFER_SIZE];
+	size_t sz;
+
+	if (xQueueReceive(incoming_symbols, &data, pdMS_TO_TICKS(500))) {
+		switch (decode_aeha_symbols(data.received_symbols,
+			data.num_symbols, buf, &sz)) {
+		case DCD_ERR:
+			return 1;
+		case DCD_NXT:
+			show_signal(buf, sz);
+			show_sign(SN_ON);
+		case DCD_RTY:
+			/* make gcc happy */
+		}
+
+		S_(rmt_receive(rx_channel, symbuf, sbsz, cfg));
+	} else {
+		show_sign(*sign);
+		*sign ^= 0xFF;
+	}
+
+	return 0;
+}
+
 void receive_symbol_step(void)
 {
-	rmt_symbol_word_t symbuf[SYMBUF_SIZE];
-	rmt_rx_done_event_data_t evt;
-	rmt_receive_config_t cfg = {
-		.signal_range_min_ns = SIG_MINTHOLD,
-		.signal_range_max_ns = SIG_MAXTHOLD,
-	};
+	rmt_symbol_word_t symbuf[BUFFER_SIZE];
+	rmt_receive_config_t cfg;
+	u8 sign = SN_1 | SN_3 | SN_5 | SN_7;
 
+	make_aeha_receiver_config(&cfg);
 	S_(rmt_receive(rx_channel, symbuf, sizeof(symbuf), &cfg));
 
 	while (39) {
-		if (!xQueueReceive(incoming_symbols, &evt, portMAX_DELAY))
-			continue;
-
-		decode_symbol_entries(evt.received_symbols, evt.num_symbols);
-
-		S_(rmt_receive(rx_channel, symbuf, sizeof(symbuf), &cfg));
+		if (do_receive_symbol(symbuf, sizeof(symbuf), &cfg, &sign)) {
+			show_sign(SN_OF);
+			break;
+		}
 	}
 }
 

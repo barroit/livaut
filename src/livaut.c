@@ -27,18 +27,17 @@
 
 void app_main(void)
 {
-	// if (init_mst_bus())
-	// 	goto schedule_task;
+	if (init_mst_bus())
+		goto schedule_task;
 
-	// bus_dev_scan_7bit();
+	debugging()
+		bus_dev_scan_7bit();
 
-	// if (init_sign())
-	// 	dsty_mst_bus();
+	if (init_sign())
+		dsty_mst_bus();
 
-// schedule_task:
+schedule_task:
 	deploy_rx_channel();
 
 	receive_symbol_step();
-
-	// wait_ir_sig();
 }

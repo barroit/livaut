@@ -20,47 +20,42 @@
 **
 ****************************************************************************/
 
-#ifndef HELPER_H
-#define HELPER_H
+#include "convert-data.h"
+#include "helper.h"
 
-#include "esp_check.h"
+static const char *hex_char_map = "0123456789ABCDEF";
 
-typedef uint8_t  u8;
-typedef uint16_t u16;
-typedef uint32_t u32;
+static inline void byte_to_hex(uint8_t b, char *hb)
+{
+	hb[0] = hex_char_map[(b >> 4) & 0x0F];
+	hb[1] = hex_char_map[b & 0x0F];
+}
 
-#define fixed_growth(x) (((x + 16) * 3) / 2)
+void bit_arr_to_hex_str_ll(const u8 *b, size_t bs, char *hb, int usemsb)
+{
+	size_t i, j = 0;
+	u8 tmp = 0;
 
-#define FIELD_TYPEOF(t, f) typeof(((t *)0)->f)
+	for_each_idx(i, bs) {
+		if (b[i] == 1)
+			tmp |= (1 << (usemsb ? (7 - i % 8) : (i % 8)));
 
-#define error(t, f, ...) \
-	ESP_LOGE(t, f, ##__VA_ARGS__)
+		if ((i % 8 == 7) || i == bs - 1) {
+			byte_to_hex(tmp, hb + j);
+			j += 2;
+			tmp = 0;
+		}
+	}
 
-#define warning(t, f, ...) \
-	ESP_LOGW(t, f, ##__VA_ARGS__)
+	hb[j] = 0;
+}
 
-#define info(t, f, ...) \
-	ESP_LOGI(t, f, ##__VA_ARGS__)
+void bit_arr_to_bit_str(const u8 *b, size_t bs, char *bb)
+{
+	size_t i;
 
-/* report on error (esp family) */
-#define ROE_ESP(c, t)						\
-	({							\
-		esp_err_t r = c;				\
-		if (r != ESP_OK)				\
-			error(t, "%s", esp_err_to_name(r));	\
-		r;						\
-	})
+	for_each_idx(i, bs)
+		bb[i] = b[i] + '0';
 
-#define PINMASK(p) (1ULL << (p))
-
-#define for_each_idx(i, n) for (i = 0; i < n; i++)
-
-#define in_range(x, a, b) (((a) < (x)) && ((b) > (x)))
-
-#ifdef LIVAUT_DEBUG
-#define debugging() if (39)
-#else
-#define debugging() if (0)
-#endif
-
-#endif /* HELPER_H */
+	bb[i] = 0;
+}
