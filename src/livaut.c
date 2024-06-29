@@ -20,10 +20,10 @@
 **
 ****************************************************************************/
 
-#include "helper.h"
 #include "bus.h"
 #include "sign.h"
 #include "transceiver.h"
+#include "debug.h"
 
 void app_main(void)
 {

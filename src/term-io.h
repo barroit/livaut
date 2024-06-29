@@ -20,27 +20,9 @@
 **
 ****************************************************************************/
 
-#ifndef SIGN_H
-#define SIGN_H
+#ifndef TERM_IO_H
+#define TERM_IO_H
 
-#include "type.h"
+void fputs_wp(const char *txt, FILE *stream, const char *pfx, size_t wrap);
 
-#define SN_1 (1 << 0)
-#define SN_2 (1 << 1)
-#define SN_3 (1 << 2)
-#define SN_4 (1 << 3)
-#define SN_5 (1 << 4)
-#define SN_6 (1 << 5)
-#define SN_7 (1 << 6)
-#define SN_8 (1 << 7)
-#define SN_ON (~0)
-#define SN_OF (0)
-
-esp_err_t init_sign(void);
-
-/**
- * plot sign, this function can be used anywhere
- */
-esp_err_t show_sign(u8 code);
-
-#endif /* SIGN_H */
+#endif /* TERM_IO_H */

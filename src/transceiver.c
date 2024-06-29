@@ -20,15 +20,14 @@
 **
 ****************************************************************************/
 
-#include <stdbool.h>
 #include "transceiver.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
-#include "convert-data.h"
 #include "aeha-protocol.h"
-#include <string.h>
 #include "sign.h"
+#include "term-io.h"
+#include "memory.h"
 
 #define S_ ESP_ERROR_CHECK /* alias */
 
@@ -42,6 +41,12 @@
 
 static rmt_channel_handle_t rx_channel;
 static QueueHandle_t incoming_symbols;
+
+enum receiver_state {
+	RX_FTERR = -1,
+	RX_DONXT,
+	RX_TMOUT,
+};
 
 static void install_rx_channel(void)
 {
@@ -80,89 +85,73 @@ void deploy_rx_channel(void)
 	S_(rmt_enable(rx_channel));
 }
 
-static void fprint_autowrap(const char *pfx, size_t wrap,
-			    const char *txt, FILE *stream)
+static void show_signal(const u8 *bits, size_t n)
 {
-	size_t pfxlen = strlen(pfx), txtlen = strlen(txt), len = pfxlen;
+	char *hexstr = xmalloc_b32(bit_sz_to_hex_len(n));
+	char *bitstr = xmalloc_b32(n);
 
-	/* usually ‘pfx’ will not exceed ‘wrap’ */
-	fputs(pfx, stream);
+	bit_arr_to_hex_str_lsb(bits, n, hexstr);
+	bit_arr_to_bit_str(bits, n, bitstr);
 
-	while (39) {
-		size_t room = wrap - len;
+	fputs_wp(bitstr, stdout, "bin: ", 80);
+	free(bitstr);
+	putchar('\n');
 
-		fprintf(stream, "%.*s\n", (int)room, txt);
-
-		if (txtlen <= room)
-			break;
-
-		txt += room;
-		txtlen -= room;
-		len = fprintf(stream, "%*s", (int)pfxlen, "");
-	}
-}
-
-#define print_autowrap(p, w, t) fprint_autowrap(p, w, t, stdout);
-
-static void show_signal(const u8 *buf, size_t sz)
-{
-	char hexstr[bit_size_to_hex_size(BUFFER_SIZE)];
-	char bitstr[BUFFER_SIZE];
-
-	bit_arr_to_hex_str_lsb(buf, sz, hexstr);
-	bit_arr_to_bit_str(buf, sz, bitstr);
-
-	print_autowrap("bin: ", 80, bitstr);
-	print_autowrap("hex: ", 80, hexstr);
+	fputs_wp(hexstr, stdout, "hex: ", 80);
+	free(hexstr);
+	putchar('\n');
 
 	putchar('\n');
 
 	fflush(stdout);
 }
 
-static int do_receive_symbol(rmt_symbol_word_t *symbuf, size_t sbsz,
-			     rmt_receive_config_t *cfg, u8 *sign)
+static enum receiver_state do_receive_symbol(void)
 {
 	rmt_rx_done_event_data_t data;
-	u8 buf[BUFFER_SIZE];
+	u8 *out;
 	size_t sz;
 
-	if (xQueueReceive(incoming_symbols, &data, pdMS_TO_TICKS(500))) {
+	if (xQueueReceive(incoming_symbols, &data, pdMS_TO_TICKS(500)))
 		switch (decode_aeha_symbols(data.received_symbols,
-			data.num_symbols, buf, &sz)) {
+			data.num_symbols, &out, &sz)) {
 		case DCD_ERR:
-			return 1;
+			return RX_FTERR;
 		case DCD_NXT:
-			show_signal(buf, sz);
+			show_signal(out, sz);
+			free(out);
 			show_sign(SN_ON);
+			/* FALLTHRU */
 		case DCD_RTY:
-			/* make gcc happy */
+			return RX_DONXT;
 		}
-
-		S_(rmt_receive(rx_channel, symbuf, sbsz, cfg));
-	} else {
-		show_sign(*sign);
-		*sign ^= 0xFF;
-	}
-
-	return 0;
+	else
+		return RX_TMOUT;
+	
+	return ~0; /* make gcc happy */
 }
 
 void receive_symbol_step(void)
 {
-	rmt_symbol_word_t symbuf[BUFFER_SIZE];
-	rmt_receive_config_t cfg;
+	rmt_symbol_word_t buf[BUFFER_SIZE];
+	rmt_receive_config_t conf;
 	u8 sign = SN_1 | SN_3 | SN_5 | SN_7;
 
-	make_aeha_receiver_config(&cfg);
-	S_(rmt_receive(rx_channel, symbuf, sizeof(symbuf), &cfg));
+	make_aeha_receiver_config(&conf);
+	S_(rmt_receive(rx_channel, buf, sizeof(buf), &conf));
 
-	while (39) {
-		if (do_receive_symbol(symbuf, sizeof(symbuf), &cfg, &sign)) {
+	while (39)
+		switch (do_receive_symbol()) {
+		case RX_FTERR:
 			show_sign(SN_OF);
-			break;
+			exit(EXIT_FAILURE);
+		case RX_DONXT:
+			S_(rmt_receive(rx_channel, buf, sizeof(buf), &conf));
+			continue;
+		case RX_TMOUT:
+			show_sign(sign);
+			sign ^= 0xFF;
 		}
-	}
 }
 
 void destroy_rx_channel(void)

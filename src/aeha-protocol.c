@@ -21,9 +21,11 @@
 ****************************************************************************/
 
 #include "aeha-protocol.h"
-#include "helper.h"
+#include "usage.h"
+#include "memory.h"
+#include "check.h"
+#include "list.h"
 #include <string.h>
-#include <stdbool.h>
 
 #define AEHA_TOLERANCE     150 /* µm */
 #define AEHA_MIN_THRESHOLD 1250    /* nm */
@@ -36,18 +38,18 @@
 #define in_aeha_range(x, t)\
 	in_range(x, AEHA_T(t) - AEHA_TOLERANCE, AEHA_T(t) + AEHA_TOLERANCE)
 
-static inline bool is_aeha_frame(size_t n)
+static inline int is_aeha_frame(size_t n)
 {
 	return n == 162 || n == 154 || n == 6;
 }
 
-static inline bool is_aeha_leader(const rmt_symbol_word_t *sym)
+static inline int is_aeha_leader(const rmt_symbol_word_t *sym)
 {
 	return in_aeha_range(sym->duration0, 8) &&
 		in_aeha_range(sym->duration1, 4);
 }
 
-static inline bool is_aeha_symbols(const rmt_symbol_word_t *syms, size_t n)
+static inline int is_aeha_symbols(const rmt_symbol_word_t *syms, size_t n)
 {
 	return is_aeha_frame(n) && is_aeha_leader(syms);
 }
@@ -65,49 +67,50 @@ static u8 get_aeha_bit(u16 d1, u16 d2)
 	else
 		derr = d2;
 
-	ESP_LOGE("aeha decoding",
-		 "illegal symbol found (duration ‘%" PRIu16 "µm’)", derr);
+	error("aeha decoding",
+	      "illegal symbol found (duration ‘%" PRIu16 "µm’)", derr);
 
 	return ~0;
 }
 
-static enum decoder_state decode_aeha_symbols_step(
-	const rmt_symbol_word_t *syms,
-	size_t n,
-	u8 *buf)
+static enum decoder_state decode_aeha_symbols_step(const rmt_symbol_word_t *s,
+						   size_t n, u8 *out)
 {
 	size_t i;
 	u8 bit;
 
 	for_each_idx(i, n) {
-		bit = get_aeha_bit(syms[i].duration0, syms[i].duration1);
+		bit = get_aeha_bit(s[i].duration0, s[i].duration1);
 		if (bit == (u8)~0)
 			return DCD_ERR;
 
-		*buf = bit;
-		buf++;
+		*out = bit;
+		out++;
 	}
 
 	return DCD_NXT;
 }
 
-enum decoder_state decode_aeha_symbols(rmt_symbol_word_t *syms, size_t n,
-				       u8 *buf, size_t *sz)
+enum decoder_state decode_aeha_symbols(rmt_symbol_word_t *s, size_t n,
+				       u8 **out, size_t *sz)
 {
-	if (!is_aeha_symbols(syms, n))
+	if (!is_aeha_symbols(s, n))
 		return DCD_RTY;
 
 	/* skip leader */
-	syms++;
+	s++;
 	n--;
 
 	/**
-	 * duration1 of the last symbol is 0, we simply skip this symbol
+	 * duration1 of the last symbol is 0, it's not a valid bit
+	 * that's so we simply skip this symbol
 	 */
 	n--;
 
 	*sz = n;
-	return decode_aeha_symbols_step(syms, n, buf);
+	*out = xmalloc_b32(n);
+
+	return decode_aeha_symbols_step(s, n, *out);
 }
 
 void make_aeha_receiver_config(rmt_receive_config_t *cfg)

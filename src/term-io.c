@@ -20,27 +20,26 @@
 **
 ****************************************************************************/
 
-#ifndef SIGN_H
-#define SIGN_H
+#include <string.h>
+#include <stdio.h>
 
-#include "type.h"
+void fputs_wp(const char *txt, FILE *stream, const char *pfx, size_t wrap)
+{
+	size_t pfxlen = strlen(pfx), txtlen = strlen(txt), len = pfxlen;
 
-#define SN_1 (1 << 0)
-#define SN_2 (1 << 1)
-#define SN_3 (1 << 2)
-#define SN_4 (1 << 3)
-#define SN_5 (1 << 4)
-#define SN_6 (1 << 5)
-#define SN_7 (1 << 6)
-#define SN_8 (1 << 7)
-#define SN_ON (~0)
-#define SN_OF (0)
+	/* usually ‘pfx’ will not exceed ‘wrap’ */
+	fputs(pfx, stream);
 
-esp_err_t init_sign(void);
+	while (39) {
+		size_t room = wrap - len;
 
-/**
- * plot sign, this function can be used anywhere
- */
-esp_err_t show_sign(u8 code);
+		fprintf(stream, "%.*s\n", (int)room, txt);
 
-#endif /* SIGN_H */
+		if (txtlen <= room)
+			break;
+
+		txt += room;
+		txtlen -= room;
+		len = fprintf(stream, "%*s", (int)pfxlen, "");
+	}
+}

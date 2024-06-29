@@ -21,7 +21,9 @@
 ****************************************************************************/
 
 #include "bus.h"
-#include "helper.h"
+#include "usage.h"
+#include "driver/i2c_master.h"
+#include "type.h"
 
 #define PCF8574_ADDR 0x20
 #define SCL_SPEED    100000

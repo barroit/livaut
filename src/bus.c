@@ -21,7 +21,10 @@
 ****************************************************************************/
 
 #include "bus.h"
-#include "helper.h"
+#include "driver/i2c_master.h"
+#include "type.h"
+#include "usage.h"
+#include "list.h"
 
 #define I2C_MASTER_PORT   I2C_NUM_0
 #define I2C_MASTER_SCL_IO 22

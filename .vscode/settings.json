@@ -47,6 +47,20 @@
 		"aeha-protocol.h": "c",
 		"cstring": "c",
 		"*.inc": "c",
-		"string.h": "c"
+		"string.h": "c",
+		"esp_log.h": "c",
+		"stdint.h": "c",
+		"term-io.h": "c",
+		"wrapper.h": "c",
+		"memory.h": "c",
+		"sdkconfig.h": "c",
+		"esp_rom_sys.h": "c",
+		"type.h": "c",
+		"usage.h": "c",
+		"stdlib.h": "c",
+		"bus.h": "c",
+		"i2c_types.h": "c",
+		"soc_caps.h": "c",
+		"check.h": "c"
 	}
 }

@@ -23,7 +23,8 @@
 #ifndef I2C_BUS_H
 #define I2C_BUS_H
 
-#include "driver/i2c_master.h"
+#include "driver/i2c_types.h"
+#include "esp_err.h"
 
 esp_err_t init_mst_bus(void);
 

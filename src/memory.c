@@ -20,27 +20,42 @@
 **
 ****************************************************************************/
 
-#ifndef SIGN_H
-#define SIGN_H
+#include "memory.h"
+#include "list.h"
 
-#include "type.h"
+static const char *hex_char_map = "0123456789ABCDEF";
 
-#define SN_1 (1 << 0)
-#define SN_2 (1 << 1)
-#define SN_3 (1 << 2)
-#define SN_4 (1 << 3)
-#define SN_5 (1 << 4)
-#define SN_6 (1 << 5)
-#define SN_7 (1 << 6)
-#define SN_8 (1 << 7)
-#define SN_ON (~0)
-#define SN_OF (0)
+static inline void byte_to_hex(uint8_t b, char *hb)
+{
+	hb[0] = hex_char_map[(b >> 4) & 0x0F];
+	hb[1] = hex_char_map[b & 0x0F];
+}
 
-esp_err_t init_sign(void);
+void bit_arr_to_hex_str_ll(const u8 *b, size_t bn, char *h, int msb)
+{
+	size_t i, j = 0;
+	u8 tmp = 0;
 
-/**
- * plot sign, this function can be used anywhere
- */
-esp_err_t show_sign(u8 code);
+	for_each_idx(i, bn) {
+		if (b[i] == 1)
+			tmp |= (1 << (msb ? (7 - i % 8) : (i % 8)));
 
-#endif /* SIGN_H */
+		if ((i % 8 == 7) || i == bn - 1) {
+			byte_to_hex(tmp, h + j);
+			j += 2;
+			tmp = 0;
+		}
+	}
+
+	h[j] = 0;
+}
+
+void bit_arr_to_bit_str(const u8 *b, size_t bs, char *bb)
+{
+	size_t i;
+
+	for_each_idx(i, bs)
+		bb[i] = b[i] + '0';
+
+	bb[i] = 0;
+}

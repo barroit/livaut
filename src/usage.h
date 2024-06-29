@@ -20,27 +20,36 @@
 **
 ****************************************************************************/
 
-#ifndef SIGN_H
-#define SIGN_H
+#ifndef USAGE_H
+#define USAGE_H
 
-#include "type.h"
+#include "esp_log.h"
+#include "esp_err.h"
+#include <stdlib.h>
 
-#define SN_1 (1 << 0)
-#define SN_2 (1 << 1)
-#define SN_3 (1 << 2)
-#define SN_4 (1 << 3)
-#define SN_5 (1 << 4)
-#define SN_6 (1 << 5)
-#define SN_7 (1 << 6)
-#define SN_8 (1 << 7)
-#define SN_ON (~0)
-#define SN_OF (0)
+#define fatal(f, ...)					\
+	do {						\
+		ESP_LOGE("fatal", f, ##__VA_ARGS__);	\
+		exit(EXIT_FAILURE);			\
+	} while (0)
+	
 
-esp_err_t init_sign(void);
+#define error(t, f, ...) \
+	ESP_LOGE(t, f, ##__VA_ARGS__)
 
-/**
- * plot sign, this function can be used anywhere
- */
-esp_err_t show_sign(u8 code);
+#define warning(t, f, ...) \
+	ESP_LOGW(t, f, ##__VA_ARGS__)
 
-#endif /* SIGN_H */
+#define info(t, f, ...) \
+	ESP_LOGI(t, f, ##__VA_ARGS__)
+
+/* report on error (esp family) */
+#define ROE_ESP(c, t)						\
+	({							\
+		esp_err_t r = c;				\
+		if (r != ESP_OK)				\
+			error(t, "%s", esp_err_to_name(r));	\
+		r;						\
+	})
+
+#endif

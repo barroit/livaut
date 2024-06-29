@@ -24,7 +24,7 @@
 #define AEHA_PROTOCOL_H
 
 #include "driver/rmt_rx.h"
-#include "helper.h"
+#include "type.h"
 
 enum decoder_state {
 	DCD_RTY = -1,
@@ -32,8 +32,8 @@ enum decoder_state {
 	DCD_ERR,
 };
 
-enum decoder_state decode_aeha_symbols(rmt_symbol_word_t *syms, size_t n,
-				       u8 *buf, size_t *sz);
+enum decoder_state decode_aeha_symbols(rmt_symbol_word_t *s, size_t n,
+				       u8 **buf, size_t *sz);
 
 void make_aeha_receiver_config(rmt_receive_config_t *cfg);
 

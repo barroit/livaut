@@ -20,14 +20,31 @@
 **
 ****************************************************************************/
 
-#ifndef CONVERT_DATA_H
-#define CONVERT_DATA_H
+#ifndef MEMORY_H
+#define MEMORY_H
 
-#include "helper.h"
+#include "usage.h"
+#include <stdlib.h>
+#include "type.h"
 
-#define bit_size_to_hex_size(x) (((x / 8) * 2))
+#define fixed_growth(x) (((x + 16) * 3) / 2)
 
-void bit_arr_to_hex_str_ll(const u8 *b, size_t bs, char *hb, int usemsb);
+#define to_boundary_32(x) ((x + 31) & ~31)
+
+static inline void *xmalloc(size_t n)
+{
+	void *m = malloc(n);
+	if (m != NULL)
+		return m;
+
+	fatal("malloc() failed (tried to allocate %" PRIu16 " bytes", n);
+}
+
+#define xmalloc_b32(n) xmalloc(to_boundary_32(n))
+
+#define bit_sz_to_hex_len(x) (((x / 8) * 2))
+
+void bit_arr_to_hex_str_ll(const u8 *b, size_t bs, char *hb, int msb);
 
 #define bit_arr_to_hex_str_msb(b, bs, hb)\
 	bit_arr_to_hex_str_ll(b, bs, hb, 1)
@@ -37,4 +54,4 @@ void bit_arr_to_hex_str_ll(const u8 *b, size_t bs, char *hb, int usemsb);
 
 void bit_arr_to_bit_str(const u8 *b, size_t bs, char *bb);
 
-#endif /* CONVERT_DATA_H */
+#endif /* MEMORY_H */
