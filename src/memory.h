@@ -26,32 +26,41 @@
 #include "usage.h"
 #include <stdlib.h>
 #include "type.h"
-
-#define fixed_growth(x) (((x + 16) * 3) / 2)
-
-#define to_boundary_32(x) ((x + 31) & ~31)
+#include "calc.h"
 
 static inline void *xmalloc(size_t n)
 {
-	void *m = malloc(n);
-	if (m != NULL)
-		return m;
+	void *buf = malloc(n);
+	if (buf != NULL)
+		return buf;
 
-	fatal("malloc() failed (tried to allocate %" PRIu16 " bytes", n);
+	die("malloc()",
+	    "out of memory (tried to allocate %" PRIu16 " bytes", n);
+}
+
+static inline void *xrealloc(void *p, size_t n)
+{
+	void *buf = realloc(p, n);
+	if (buf != NULL)
+		return buf;
+
+	die("realloc()",
+	    "out of memory (tried to allocate %" PRIu16 " bytes", n);
 }
 
 #define xmalloc_b32(n) xmalloc(to_boundary_32(n))
 
-#define bit_sz_to_hex_len(x) (((x / 8) * 2))
+#define xrealloc_b32(p, n) xrealloc(p, to_boundary_32(n))
 
-void bit_arr_to_hex_str_ll(const u8 *b, size_t bs, char *hb, int msb);
+#define REALLOC_ARRAY(p, n) xrealloc_b32(p, st_mult(sizeof(*(p)), n))
 
-#define bit_arr_to_hex_str_msb(b, bs, hb)\
-	bit_arr_to_hex_str_ll(b, bs, hb, 1)
-
-#define bit_arr_to_hex_str_lsb(b, bs, hb)\
-	bit_arr_to_hex_str_ll(b, bs, hb, 0)
-
-void bit_arr_to_bit_str(const u8 *b, size_t bs, char *bb);
+#define CAPACITY_GROW(ptr, len, cap)				\
+	do {							\
+		if (len > cap) {				\
+			cap = fixed_grow(cap);			\
+			cap = cap < (len) ? (len) : cap;	\
+			ptr = REALLOC_ARRAY(ptr, cap);		\
+		}						\
+	} while (0)
 
 #endif /* MEMORY_H */

@@ -20,9 +20,26 @@
 **
 ****************************************************************************/
 
-#ifndef CHECK_H
-#define CHECK_H
+#ifndef STRBUF_H
+#define STRBUF_H
 
-#define in_range(x, a, b) (((a) < (x)) && ((b) > (x)))
+#include "type.h"
+#include <stddef.h>
 
-#endif /* CHECK_H */
+struct strbuf {
+	size_t len;
+	size_t cap;
+	char *buf;
+};
+
+void strbuf_init(struct strbuf *sb, size_t n);
+
+size_t strbuf_putc(struct strbuf *sb, char c);
+
+size_t strbuf_puts(struct strbuf *sb, const char *str);
+
+size_t strbuf_printf(struct strbuf *sb, const char *fmt, ...);
+
+void strbuf_free(struct strbuf *sb);
+
+#endif /* STRBUF_H */

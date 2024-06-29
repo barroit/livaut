@@ -85,23 +85,12 @@ void deploy_rx_channel(void)
 	S_(rmt_enable(rx_channel));
 }
 
-static void show_signal(const u8 *bits, size_t n)
+static inline void show_signal_info(const u8 *bits, size_t n)
 {
-	char *hexstr = xmalloc_b32(bit_sz_to_hex_len(n));
-	char *bitstr = xmalloc_b32(n);
+	print_bit_dump(bits, n);
 
-	bit_arr_to_hex_str_lsb(bits, n, hexstr);
-	bit_arr_to_bit_str(bits, n, bitstr);
-
-	fputs_wp(bitstr, stdout, "bin: ", 80);
-	free(bitstr);
-	putchar('\n');
-
-	fputs_wp(hexstr, stdout, "hex: ", 80);
-	free(hexstr);
-	putchar('\n');
-
-	putchar('\n');
+	/* for verify purpose */
+	print_checksum(bits, n - 1);
 
 	fflush(stdout);
 }
@@ -118,16 +107,16 @@ static enum receiver_state do_receive_symbol(void)
 		case DCD_ERR:
 			return RX_FTERR;
 		case DCD_NXT:
-			show_signal(out, sz);
-			free(out);
 			show_sign(SN_ON);
+			show_signal_info(out, sz);
+			free(out);
 			/* FALLTHRU */
 		case DCD_RTY:
 			return RX_DONXT;
 		}
 	else
 		return RX_TMOUT;
-	
+
 	return ~0; /* make gcc happy */
 }
 

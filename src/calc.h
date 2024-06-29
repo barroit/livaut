@@ -20,42 +20,31 @@
 **
 ****************************************************************************/
 
-#include "memory.h"
-#include "list.h"
+#ifndef CALC_H
+#define CALC_H
 
-static const char *hex_char_map = "0123456789ABCDEF";
+#include "usage.h"
+#include <limits.h>
 
-static inline void byte_to_hex(uint8_t b, char *hb)
+#define in_range(c, a, b) (((a) < (c)) && ((b) > (c)))
+
+#define fixed_grow(a) ((((a) + 16) * 3) / 2)
+
+#define to_boundary_32(a) (((a) + 3) & ~3)
+
+#define bitsizeof(a) (CHAR_BIT * sizeof(a))
+
+#define max_uint_val(a) (UINTMAX_MAX >> (bitsizeof(uintmax_t) - bitsizeof(a)))
+
+#define uint_mult_overflows(a, b) ((a) && ((b) > (max_uint_val(a) / (a))))
+
+static inline size_t st_mult(size_t a, size_t b)
 {
-	hb[0] = hex_char_map[(b >> 4) & 0x0F];
-	hb[1] = hex_char_map[b & 0x0F];
+	if (!uint_mult_overflows(a, b))
+		return a * b;
+
+	die("st_mult()", "size overflow (%" PRIuMAX " * %" PRIuMAX ")",
+	    (uintmax_t)a, (uintmax_t)b);
 }
 
-void bit_arr_to_hex_str_ll(const u8 *b, size_t bn, char *h, int msb)
-{
-	size_t i, j = 0;
-	u8 tmp = 0;
-
-	for_each_idx(i, bn) {
-		if (b[i] == 1)
-			tmp |= (1 << (msb ? (7 - i % 8) : (i % 8)));
-
-		if ((i % 8 == 7) || i == bn - 1) {
-			byte_to_hex(tmp, h + j);
-			j += 2;
-			tmp = 0;
-		}
-	}
-
-	h[j] = 0;
-}
-
-void bit_arr_to_bit_str(const u8 *b, size_t bs, char *bb)
-{
-	size_t i;
-
-	for_each_idx(i, bs)
-		bb[i] = b[i] + '0';
-
-	bb[i] = 0;
-}
+#endif /* CALC_H */

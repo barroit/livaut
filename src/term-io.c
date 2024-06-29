@@ -20,26 +20,102 @@
 **
 ****************************************************************************/
 
-#include <string.h>
 #include <stdio.h>
+#include <inttypes.h>
+#include "list.h"
+#include "strbuf.h"
 
-void fputs_wp(const char *txt, FILE *stream, const char *pfx, size_t wrap)
+#define bit_pos_mask(a) (a % 8)
+#define is_byte_head(a) (bit_pos_mask(a) == 0)
+#define is_byte_tail(a) (bit_pos_mask(a) == 7)
+#define is_byte_midd(a) (bit_pos_mask(a) == 3)
+
+static void do_print_bit_dump(struct strbuf *sb, const u8 *bitmap, size_t i)
 {
-	size_t pfxlen = strlen(pfx), txtlen = strlen(txt), len = pfxlen;
+	if (is_byte_head(i))
+		strbuf_puts(sb, "|  ");
 
-	/* usually ‘pfx’ will not exceed ‘wrap’ */
-	fputs(pfx, stream);
+	strbuf_puts(sb, bitmap[i] ? "\033[1;33m1\033[0m" : "0");
 
-	while (39) {
-		size_t room = wrap - len;
+	if (is_byte_midd(i))
+		strbuf_puts(sb, "  |  ");
+	else if (!is_byte_tail(i))
+		strbuf_puts(sb, "  ");
+}
 
-		fprintf(stream, "%.*s\n", (int)room, txt);
+static const char *hex_char_map = "0123456789ABCDEF";
 
-		if (txtlen <= room)
-			break;
+static void do_print_hex_dump_color(struct strbuf *sb, char c)
+{
+	if (c - '0')
+		strbuf_printf(sb, "\033[1;33m%c\033[0m", c);
+	else
+		strbuf_putc(sb, c);
+}
 
-		txt += room;
-		txtlen -= room;
-		len = fprintf(stream, "%*s", (int)pfxlen, "");
+/**
+ * bitmap must be lsb -> msb
+ */
+static void do_print_hex_dump(struct strbuf *sb, const u8 *bitmap,
+			      size_t i, u8 *tmp)
+{
+	if (bitmap[i])
+		*tmp |= (1 << (i % 8));
+
+	if (is_byte_tail(i)) {
+		strbuf_puts(sb, "  |  ");
+		do_print_hex_dump_color(sb, hex_char_map[*tmp & 0x0F]);
+
+		strbuf_puts(sb, "  ");
+
+		do_print_hex_dump_color(sb, hex_char_map[(*tmp >> 4) & 0x0F]);
+		strbuf_puts(sb, "  |");
+
+		*tmp = 0;
 	}
+}
+
+void print_bit_dump(const u8 *bitmap, size_t n)
+{
+	struct strbuf sb;
+	strbuf_init(&sb, n);
+
+	size_t i, j = 0;
+	u8 tmp = 0;
+	for_each_idx(i, n) {
+		if (is_byte_head(i))
+			strbuf_printf(&sb, "  %" PRIu16 "\t", j);
+
+		do_print_bit_dump(&sb, bitmap, i);
+		do_print_hex_dump(&sb, bitmap, i, &tmp);
+
+		if (is_byte_tail(i)) {
+			strbuf_printf(&sb, "  %" PRIu16 "\n", j);
+			j++;
+		}
+	}
+
+	fputs(sb.buf, stdout);
+	strbuf_free(&sb);
+}
+
+void print_checksum(const u8 *bitmap, size_t n)
+{
+	size_t i;
+	u16 sum = 0;
+	u8 tmp = 0;
+	for_each_idx(i, n) {
+		if (bitmap[i])
+			tmp |= (1 << (i % 8));
+
+		if (is_byte_tail(i)) {
+			sum += tmp;
+			tmp = 0;
+		}
+	}
+
+	sum &= 0x00FF;
+	printf("checksum: 0x%c%c\n",
+	       hex_char_map[(sum >> 4) & 0x0F],
+	       hex_char_map[sum & 0x0F]);
 }

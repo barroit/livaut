@@ -23,7 +23,7 @@
 #include "aeha-protocol.h"
 #include "usage.h"
 #include "memory.h"
-#include "check.h"
+#include "calc.h"
 #include "list.h"
 #include <string.h>
 

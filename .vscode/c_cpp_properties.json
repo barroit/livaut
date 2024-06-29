@@ -11,6 +11,9 @@
 				// solution is to specify path manually
 				"${HOME}/Source/esp-idf/components/**"
 			],
+			"defines": [
+				"_POSIX_C_SOURCE=200809L"
+			],
 			"cStandard": "gnu17",
 			"compilerPath": "${HOME}/.espressif/tools/xtensa-esp-elf/esp-13.2.0_20230928/xtensa-esp-elf/bin/xtensa-esp32-elf-gcc"
 		}

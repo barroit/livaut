@@ -23,6 +23,8 @@
 #ifndef TERM_IO_H
 #define TERM_IO_H
 
-void fputs_wp(const char *txt, FILE *stream, const char *pfx, size_t wrap);
+void print_bit_dump(const u8 *bitmap, size_t n);
+
+void print_checksum(const u8 *bitmap, size_t n);
 
 #endif /* TERM_IO_H */

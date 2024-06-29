@@ -25,6 +25,8 @@
 #include "transceiver.h"
 #include "debug.h"
 
+#include "strbuf.h"
+
 void app_main(void)
 {
 	if (init_mst_bus())

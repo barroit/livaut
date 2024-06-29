@@ -27,10 +27,10 @@
 #include "esp_err.h"
 #include <stdlib.h>
 
-#define fatal(f, ...)					\
-	do {						\
-		ESP_LOGE("fatal", f, ##__VA_ARGS__);	\
-		exit(EXIT_FAILURE);			\
+#define die(t, f, ...)				\
+	do {					\
+		ESP_LOGE(t, f, ##__VA_ARGS__);	\
+		exit(EXIT_FAILURE);		\
 	} while (0)
 	
 
