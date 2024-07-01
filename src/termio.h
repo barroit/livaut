@@ -20,13 +20,37 @@
 **
 ****************************************************************************/
 
-#ifndef TRANSCEIVER_H
-#define TRANSCEIVER_H
+#ifndef TERMIO_H
+#define TERMIO_H
 
-void deploy_rx_channel(void);
+#include "types.h"
+#include "esp_log.h"
+#include "esp_err.h"
+#include <stdlib.h>
 
-void receive_symbol_step(void);
+void print_bit_dump(const u8 *bitmap, size_t n);
 
-void destroy_rx_channel(void);
+void print_checksum(const u8 *bitmap, size_t n);
 
-#endif /* TRANSCEIVER_H */
+#define die(t, f, ...)				\
+	do {					\
+		ESP_LOGE(t, f, ##__VA_ARGS__);	\
+		abort();			\
+	} while (0)
+
+#define error(t, f, ...)			\
+	({					\
+		ESP_LOGE(t, f, ##__VA_ARGS__);	\
+		1;				\
+	})
+
+#define warning(t, f, ...)			\
+	({					\
+		ESP_LOGW(t, f, ##__VA_ARGS__);	\
+		1;				\
+	})
+
+#define info(t, f, ...) \
+	ESP_LOGI(t, f, ##__VA_ARGS__)
+
+#endif /* TERMIO_H */

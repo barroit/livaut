@@ -22,24 +22,36 @@
 
 #include "bus.h"
 #include "sign.h"
-#include "transceiver.h"
 #include "debug.h"
+#include "jumper.h"
+#include "run-action.h"
+#include "soc/gpio_num.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
-#include "strbuf.h"
+enum action_state receive_signal(void);
+int receive_signal_setup(struct action_config *);
+int receive_signal_teardown(void);
+
+static const struct action actions[] = {
+	ACT("receive-signal", receive_signal, GPIO_NUM_32, GPIO_NUM_25,
+	    receive_signal_setup, receive_signal_teardown),
+	ACTEND(),
+};
 
 void app_main(void)
 {
-	if (init_mst_bus())
-		goto schedule_task;
+	config_jumper();
+
+	if (install_mst_bus())
+		goto do_action;
 
 	debugging()
 		bus_dev_scan_7bit();
 
 	if (init_sign())
-		dsty_mst_bus();
+		uninstall_mst_bus();
 
-schedule_task:
-	deploy_rx_channel();
-
-	receive_symbol_step();
+do_action:
+	xTaskCreate(run_action, "run_action", 4096, (void *)actions, 5, NULL);
 }

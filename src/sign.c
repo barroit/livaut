@@ -21,32 +21,36 @@
 ****************************************************************************/
 
 #include "bus.h"
-#include "usage.h"
+#include "termio.h"
 #include "driver/i2c_master.h"
-#include "type.h"
+#include "types.h"
 
-#define PCF8574_ADDR 0x20
+#define EXPANDER_ADDR 0x20
 #define SCL_SPEED    100000
 
-static i2c_master_dev_handle_t pcf8574;
+static i2c_master_dev_handle_t expander;
 
-esp_err_t init_sign(void)
+int init_sign(void)
 {
 	i2c_master_bus_handle_t bus = get_mst_bus();
 	i2c_device_config_t conf = {
 		.dev_addr_length = I2C_ADDR_BIT_LEN_7,
-		.device_address  = PCF8574_ADDR,
+		.device_address  = EXPANDER_ADDR,
 		.scl_speed_hz    = SCL_SPEED,
 	};
 
-	return ROE_ESP(i2c_master_bus_add_device(bus, &conf, &pcf8574),
-			"sign_init");
+	if (i2c_master_bus_add_device(bus, &conf, &expander))
+		return warning("init_sign()",
+			       "failed to initialize expander (address 0x%X)",
+			       EXPANDER_ADDR);
+
+	return 0;
 }
 
-esp_err_t show_sign(u8 code)
+int show_sign(u8 code)
 {
-	if (!pcf8574 || !get_mst_bus())
+	if (!expander || !get_mst_bus())
 		return -1;
 
-	return i2c_master_transmit(pcf8574, &code, 1, -1);
+	return i2c_master_transmit(expander, &code, 1, -1);
 }

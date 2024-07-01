@@ -29,4 +29,7 @@
 #define debugging() if (0)
 #endif
 
+#define TASK
+#define INTASK
+
 #endif /* DEBUG_H */

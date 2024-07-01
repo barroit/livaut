@@ -20,36 +20,13 @@
 **
 ****************************************************************************/
 
-#ifndef USAGE_H
-#define USAGE_H
+#ifndef JUMPER_H
+#define JUMPER_H
 
-#include "esp_log.h"
-#include "esp_err.h"
-#include <stdlib.h>
+#include "types.h"
 
-#define die(t, f, ...)				\
-	do {					\
-		ESP_LOGE(t, f, ##__VA_ARGS__);	\
-		exit(EXIT_FAILURE);		\
-	} while (0)
-	
+void config_jumper(void);
 
-#define error(t, f, ...) \
-	ESP_LOGE(t, f, ##__VA_ARGS__)
+int is_jumper_set(u8 j1, u8 j2);
 
-#define warning(t, f, ...) \
-	ESP_LOGW(t, f, ##__VA_ARGS__)
-
-#define info(t, f, ...) \
-	ESP_LOGI(t, f, ##__VA_ARGS__)
-
-/* report on error (esp family) */
-#define ROE_ESP(c, t)						\
-	({							\
-		esp_err_t r = c;				\
-		if (r != ESP_OK)				\
-			error(t, "%s", esp_err_to_name(r));	\
-		r;						\
-	})
-
-#endif
+#endif /* JUMPER_H */

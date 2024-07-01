@@ -24,17 +24,17 @@
 #define AEHA_PROTOCOL_H
 
 #include "driver/rmt_rx.h"
-#include "type.h"
+#include "types.h"
 
 enum decoder_state {
-	DCD_RTY = -1,
-	DCD_NXT,
-	DCD_ERR,
+	DEC_DONE,
+	DEC_SKIP,
+	DEC_ERRO,
 };
 
 enum decoder_state decode_aeha_symbols(rmt_symbol_word_t *s, size_t n,
 				       u8 **buf, size_t *sz);
 
-void make_aeha_receiver_config(rmt_receive_config_t *cfg);
+void make_aeha_receiver_config(rmt_receive_config_t *conf);
 
 #endif /* AEHA_PROTOCOL_H */

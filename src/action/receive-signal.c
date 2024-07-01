@@ -20,44 +20,37 @@
 **
 ****************************************************************************/
 
-#include "transceiver.h"
+#include "run-action.h"
+#include "aeha-protocol.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
-#include "aeha-protocol.h"
-#include "sign.h"
-#include "term-io.h"
-#include "memory.h"
+#include "termio.h"
 
-#define S_ ESP_ERROR_CHECK /* alias */
+#define RS_ ESP_ERROR_CHECK /* alias */
 
 #define CH_CLOCK_RES   1000000 /* channel clock resolution */
 #define CH_CLOCK_SRC   RMT_CLK_SRC_DEFAULT
 #define CH_MEMBLK_SIZE 256
 
-#define RX_GPIO GPIO_NUM_19
-
 #define BUFFER_SIZE 256
 
 static rmt_channel_handle_t rx_channel;
 static QueueHandle_t incoming_symbols;
-
-enum receiver_state {
-	RX_FTERR = -1,
-	RX_DONXT,
-	RX_TMOUT,
-};
+static rmt_symbol_word_t rmt_symbols[BUFFER_SIZE];
+static rmt_receive_config_t rmt_config;
+static int rmt_receiving;
 
 static void install_rx_channel(void)
 {
-	rmt_rx_channel_config_t cfg = {
-		.gpio_num          = RX_GPIO,
+	rmt_rx_channel_config_t conf = {
+		.gpio_num          = GPIO_NUM_19,
 		.clk_src           = CH_CLOCK_SRC,
 		.resolution_hz     = CH_CLOCK_RES,
 		.mem_block_symbols = CH_MEMBLK_SIZE,
 	};
 
-	S_(rmt_new_rx_channel(&cfg, &rx_channel));
+	RS_(rmt_new_rx_channel(&conf, &rx_channel));
 }
 
 static bool receive_frame(rmt_channel_handle_t _, /* rx channel */
@@ -65,12 +58,12 @@ static bool receive_frame(rmt_channel_handle_t _, /* rx channel */
 			  void *ctx)
 {
 	BaseType_t unblk;
-
+	rmt_receiving = 0;
 	xQueueSendFromISR(ctx, syms, &unblk);
 	return unblk;
 }
 
-void deploy_rx_channel(void)
+int receive_signal_setup(struct action_config *conf)
 {
 	install_rx_channel();
 
@@ -80,9 +73,27 @@ void deploy_rx_channel(void)
 
 	incoming_symbols = xQueueCreate(8, sizeof(rmt_rx_done_event_data_t));
 
-	S_(rmt_rx_register_event_callbacks(rx_channel, &cb, incoming_symbols));
+	RS_(rmt_rx_register_event_callbacks(rx_channel, &cb,
+					    incoming_symbols));
 
-	S_(rmt_enable(rx_channel));
+	RS_(rmt_enable(rx_channel));
+
+	make_aeha_receiver_config(&rmt_config);
+
+	conf->delay = 0; /* we apply delay from receive_signal() */
+	info("receive_signal_setup()", "ok");
+	return 0;
+}
+
+int receive_signal_teardown(void)
+{
+	RS_(rmt_disable(rx_channel));
+	RS_(rmt_del_channel(rx_channel));
+
+	vQueueDelete(incoming_symbols);
+
+	info("receive_signal_teardown()", "ok");
+	return 0;
 }
 
 static inline void show_signal_info(const u8 *bits, size_t n)
@@ -95,60 +106,34 @@ static inline void show_signal_info(const u8 *bits, size_t n)
 	fflush(stdout);
 }
 
-static enum receiver_state do_receive_symbol(void)
+enum action_state receive_signal(void)
 {
 	rmt_rx_done_event_data_t data;
-	u8 *out;
-	size_t sz;
 
-	if (xQueueReceive(incoming_symbols, &data, pdMS_TO_TICKS(500)))
-		switch (decode_aeha_symbols(data.received_symbols,
-			data.num_symbols, &out, &sz)) {
-		case DCD_ERR:
-			return RX_FTERR;
-		case DCD_NXT:
-			show_sign(SN_ON);
-			show_signal_info(out, sz);
-			free(out);
-			/* FALLTHRU */
-		case DCD_RTY:
-			return RX_DONXT;
-		}
-	else
-		return RX_TMOUT;
+	if (!rmt_receiving) {
+		RS_(rmt_receive(rx_channel, rmt_symbols,
+				sizeof(rmt_symbols), &rmt_config));
+		rmt_receiving = 1;
+	}
 
-	return ~0; /* make gcc happy */
-}
+	if (!xQueueReceive(incoming_symbols, &data, pdMS_TO_TICKS(1000))) {
+		return ACT_AGIN;
+	}
 
-void receive_symbol_step(void)
-{
-	rmt_symbol_word_t buf[BUFFER_SIZE];
-	rmt_receive_config_t conf;
-	u8 sign = SN_1 | SN_3 | SN_5 | SN_7;
+	u8 *signals;
+	size_t sigsz;
 
-	make_aeha_receiver_config(&conf);
-	S_(rmt_receive(rx_channel, buf, sizeof(buf), &conf));
+	switch (decode_aeha_symbols(data.received_symbols,
+		data.num_symbols, &signals, &sigsz)) {
+	case DEC_DONE:
+		show_signal_info(signals, sigsz);
+		free(signals);
+		return ACT_DONE;
+	case DEC_SKIP:
+		return ACT_RETY;
+	case DEC_ERRO:
+		return ACT_ERRO;
+	}
 
-	while (39)
-		switch (do_receive_symbol()) {
-		case RX_FTERR:
-			show_sign(SN_OF);
-			exit(EXIT_FAILURE);
-		case RX_DONXT:
-			S_(rmt_receive(rx_channel, buf, sizeof(buf), &conf));
-			continue;
-		case RX_TMOUT:
-			show_sign(sign);
-			sign ^= 0xFF;
-		}
-}
-
-void destroy_rx_channel(void)
-{
-	S_(rmt_disable(rx_channel));
-	S_(rmt_del_channel(rx_channel));
-
-	vQueueDelete(incoming_symbols);
-
-	rx_channel = NULL;
+	return 0; /* make gcc happy */
 }

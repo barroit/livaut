@@ -23,9 +23,9 @@
 #ifndef MEMORY_H
 #define MEMORY_H
 
-#include "usage.h"
+#include "termio.h"
 #include <stdlib.h>
-#include "type.h"
+#include "types.h"
 #include "calc.h"
 
 static inline void *xmalloc(size_t n)

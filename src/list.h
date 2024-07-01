@@ -20,9 +20,11 @@
 **
 ****************************************************************************/
 
-#ifndef LIST_H
-#define LIST_H
+#ifndef BRLIST_H
+#define BRLIST_H
 
 #define for_each_idx(i, n) for (i = 0; i < n; i++)
 
-#endif /* LIST_H */
+#define for_each_elem(e, f) for (; e->f != (void *)0; e++)
+
+#endif /* BRLIST_H */

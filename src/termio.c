@@ -45,7 +45,7 @@ static void do_print_bit_dump(struct strbuf *sb, const u8 *bitmap, size_t i)
 
 static const char *hex_char_map = "0123456789ABCDEF";
 
-static void do_print_hex_dump_color(struct strbuf *sb, char c)
+static inline void do_print_hex_dump_color(struct strbuf *sb, char c)
 {
 	if (c - '0')
 		strbuf_printf(sb, "\033[1;33m%c\033[0m", c);

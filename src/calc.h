@@ -23,7 +23,7 @@
 #ifndef CALC_H
 #define CALC_H
 
-#include "usage.h"
+#include "termio.h"
 #include <limits.h>
 
 #define in_range(c, a, b) (((a) < (c)) && ((b) > (c)))

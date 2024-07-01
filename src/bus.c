@@ -22,17 +22,17 @@
 
 #include "bus.h"
 #include "driver/i2c_master.h"
-#include "type.h"
-#include "usage.h"
+#include "types.h"
+#include "termio.h"
 #include "list.h"
 
-#define I2C_MASTER_PORT   I2C_NUM_0
-#define I2C_MASTER_SCL_IO 22
-#define I2C_MASTER_SDA_IO 21
+#define I2C_MASTER_SCL   22
+#define I2C_MASTER_SDA   21
+#define I2C_GLITCH_THOLD 7
 
 static i2c_master_bus_handle_t mst_bus;
 
-esp_err_t init_mst_bus(void)
+int install_mst_bus(void)
 {
 	FIELD_TYPEOF(i2c_master_bus_config_t, flags) flag = {
 		.enable_internal_pullup = true,
@@ -40,14 +40,17 @@ esp_err_t init_mst_bus(void)
 
 	i2c_master_bus_config_t conf = {
 		.clk_source        = I2C_CLK_SRC_DEFAULT,
-		.i2c_port          = I2C_MASTER_PORT,
-		.scl_io_num        = I2C_MASTER_SCL_IO,
-		.sda_io_num        = I2C_MASTER_SDA_IO,
-		.glitch_ignore_cnt = 7,
+		.i2c_port          = I2C_NUM_0,
+		.scl_io_num        = I2C_MASTER_SCL,
+		.sda_io_num        = I2C_MASTER_SDA,
+		.glitch_ignore_cnt = I2C_GLITCH_THOLD,
 		.flags             = flag,
 	};
 
-	return ROE_ESP(i2c_new_master_bus(&conf, &mst_bus), "bus_init");
+	if (i2c_new_master_bus(&conf, &mst_bus))
+		return warning("install_mst_bus()", "failed to initialize bus");
+
+	return 0;
 }
 
 i2c_master_bus_handle_t get_mst_bus(void)
@@ -55,23 +58,24 @@ i2c_master_bus_handle_t get_mst_bus(void)
 	return mst_bus;
 }
 
-void dsty_mst_bus(void)
+void uninstall_mst_bus(void)
 {
 	i2c_del_master_bus(mst_bus);
 	mst_bus = NULL;
 }
 
-#define DEVSCAN "dev_scan"
-
 void bus_dev_scan_7bit(void)
 {
 	u16 addr;
+	int found = 0;
 
-	ESP_LOGI(DEVSCAN, "scanning master bus...");
 	for_each_idx(addr, 0x7F) {
 		if (i2c_master_probe(mst_bus, addr, 100) == ESP_OK) {
-			ESP_LOGI(DEVSCAN, "found device at 0x%02x", addr);
+			info("dev_scan", "found device at 0x%02x", addr);
+			found = 1;
 		}
 	}
-	ESP_LOGI(DEVSCAN, "scanning done");
+
+	if (!found)
+		info("dev_scan", "no device was found one the bus");
 }

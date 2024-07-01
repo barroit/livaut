@@ -23,7 +23,7 @@
 #ifndef STRBUF_H
 #define STRBUF_H
 
-#include "type.h"
+#include "types.h"
 #include <stddef.h>
 
 struct strbuf {

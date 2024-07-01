@@ -20,11 +20,46 @@
 **
 ****************************************************************************/
 
-#ifndef TERM_IO_H
-#define TERM_IO_H
+#ifndef RUN_ACTION_H
+#define RUN_ACTION_H
 
-void print_bit_dump(const u8 *bitmap, size_t n);
+#include "types.h"
 
-void print_checksum(const u8 *bitmap, size_t n);
+#define ACT(n, h, j1, j2, s, t)			\
+	{ .name = (n), .handle = (h),		\
+	  .jumper = ((j1 << 8) | j2),		\
+	  .setup = (s), .teardown = (t) }
 
-#endif /* TERM_IO_H */
+#define ACTEND() { 0 }
+
+enum action_state {
+	ACT_DONE,
+	ACT_ERRO,
+	ACT_INIT,
+	ACT_AGIN,
+	ACT_RETY,
+	ACT_CLEN,
+};
+
+struct action_config {
+	u32 delay;
+};
+
+typedef enum action_state (*action_handle_t)(void);
+typedef int (*action_setup_t)(struct action_config *);
+typedef int (*action_teardown_t)(void);
+
+struct action {
+	const char *name;
+	action_handle_t handle;
+	action_setup_t setup;
+	action_teardown_t teardown;
+	u16 jumper;
+};
+
+#define J1(j) (j >> 8)
+#define J2(j) (j & 0x00FF)
+
+void run_action(void *acts);
+
+#endif /* RUN_ACTION_H */

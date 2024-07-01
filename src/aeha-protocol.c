@@ -21,7 +21,7 @@
 ****************************************************************************/
 
 #include "aeha-protocol.h"
-#include "usage.h"
+#include "termio.h"
 #include "memory.h"
 #include "calc.h"
 #include "list.h"
@@ -82,20 +82,20 @@ static enum decoder_state decode_aeha_symbols_step(const rmt_symbol_word_t *s,
 	for_each_idx(i, n) {
 		bit = get_aeha_bit(s[i].duration0, s[i].duration1);
 		if (bit == (u8)~0)
-			return DCD_ERR;
+			return DEC_ERRO;
 
 		*out = bit;
 		out++;
 	}
 
-	return DCD_NXT;
+	return DEC_DONE;
 }
 
 enum decoder_state decode_aeha_symbols(rmt_symbol_word_t *s, size_t n,
 				       u8 **out, size_t *sz)
 {
 	if (!is_aeha_symbols(s, n))
-		return DCD_RTY;
+		return DEC_SKIP;
 
 	/* skip leader */
 	s++;
@@ -113,10 +113,10 @@ enum decoder_state decode_aeha_symbols(rmt_symbol_word_t *s, size_t n,
 	return decode_aeha_symbols_step(s, n, *out);
 }
 
-void make_aeha_receiver_config(rmt_receive_config_t *cfg)
+void make_aeha_receiver_config(rmt_receive_config_t *conf)
 {
-	memset(cfg, 0, sizeof(*cfg));
+	memset(conf, 0, sizeof(*conf));
 
-	cfg->signal_range_min_ns = AEHA_MIN_THRESHOLD;
-	cfg->signal_range_max_ns = AEHA_MAX_THRESHOLD;
+	conf->signal_range_min_ns = AEHA_MIN_THRESHOLD;
+	conf->signal_range_max_ns = AEHA_MAX_THRESHOLD;
 }
