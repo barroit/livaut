@@ -27,7 +27,7 @@
 #include "list.h"
 #include <string.h>
 
-#define AEHA_TOLERANCE     150 /* µm */
+#define AEHA_TOLERANCE     150     /* µm */
 #define AEHA_MIN_THRESHOLD 1250    /* nm */
 #define AEHA_MAX_THRESHOLD 8000000 /* nm */
 #define AEHA_TIME_UNIT     440     /* µm */
@@ -38,11 +38,6 @@
 #define in_aeha_range(x, t)\
 	in_range(x, AEHA_T(t) - AEHA_TOLERANCE, AEHA_T(t) + AEHA_TOLERANCE)
 
-static inline int is_aeha_frame(size_t n)
-{
-	return n == 162 || n == 154 || n == 6;
-}
-
 static inline int is_aeha_leader(const rmt_symbol_word_t *sym)
 {
 	return in_aeha_range(sym->duration0, 8) &&
@@ -51,7 +46,7 @@ static inline int is_aeha_leader(const rmt_symbol_word_t *sym)
 
 static inline int is_aeha_symbols(const rmt_symbol_word_t *syms, size_t n)
 {
-	return is_aeha_frame(n) && is_aeha_leader(syms);
+	return n > 1 && is_aeha_leader(syms);
 }
 
 static u8 get_aeha_bit(u16 d1, u16 d2)
@@ -101,11 +96,11 @@ enum decoder_state decode_aeha_symbols(rmt_symbol_word_t *s, size_t n,
 	s++;
 	n--;
 
-	/**
-	 * duration1 of the last symbol is 0, it's not a valid bit
-	 * that's so we simply skip this symbol
-	 */
-	n--;
+	if (s[n - 1].duration1 == 0)
+		n--;
+
+	if (n % 4 != 0)
+		return DEC_SKIP;
 
 	*sz = n;
 	*out = xmalloc_b32(n);

@@ -124,7 +124,7 @@ void TASK run_action(void *actions)
 		exec_state(state, &sign);
 
 		if (state == ACT_DONE)
-			vTaskDelay(pdMS_TO_TICKS(conf0.delay / 2));
+			vTaskDelay(pdMS_TO_TICKS(conf0.delay));
 		else if (conf.delay)
 			vTaskDelay(pdMS_TO_TICKS(conf.delay));
 	}

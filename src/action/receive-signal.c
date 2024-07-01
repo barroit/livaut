@@ -26,6 +26,7 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "termio.h"
+#include "sign.h"
 
 #define RS_ ESP_ERROR_CHECK /* alias */
 
@@ -39,7 +40,7 @@ static rmt_channel_handle_t rx_channel;
 static QueueHandle_t incoming_symbols;
 static rmt_symbol_word_t rmt_symbols[BUFFER_SIZE];
 static rmt_receive_config_t rmt_config;
-static int rmt_receiving;
+static int receive_result;
 
 static void install_rx_channel(void)
 {
@@ -58,8 +59,13 @@ static bool receive_frame(rmt_channel_handle_t _, /* rx channel */
 			  void *ctx)
 {
 	BaseType_t unblk;
-	rmt_receiving = 0;
-	xQueueSendFromISR(ctx, syms, &unblk);
+
+	/* xQueueSendFromISR returns bool  */
+	receive_result |= !xQueueSendFromISR(ctx, syms, &unblk);
+
+	receive_result |= rmt_receive(rx_channel, rmt_symbols,
+				      sizeof(rmt_symbols), &rmt_config);
+
 	return unblk;
 }
 
@@ -82,6 +88,9 @@ int receive_signal_setup(struct action_config *conf)
 
 	conf->delay = 0; /* we apply delay from receive_signal() */
 	info("receive_signal_setup()", "ok");
+
+	RS_(rmt_receive(rx_channel, rmt_symbols,
+			sizeof(rmt_symbols), &rmt_config));
 	return 0;
 }
 
@@ -108,27 +117,22 @@ static inline void show_signal_info(const u8 *bits, size_t n)
 
 enum action_state receive_signal(void)
 {
+	RS_(receive_result);
+
 	rmt_rx_done_event_data_t data;
-
-	if (!rmt_receiving) {
-		RS_(rmt_receive(rx_channel, rmt_symbols,
-				sizeof(rmt_symbols), &rmt_config));
-		rmt_receiving = 1;
-	}
-
 	if (!xQueueReceive(incoming_symbols, &data, pdMS_TO_TICKS(1000))) {
 		return ACT_AGIN;
 	}
 
 	u8 *signals;
 	size_t sigsz;
-
 	switch (decode_aeha_symbols(data.received_symbols,
 		data.num_symbols, &signals, &sigsz)) {
 	case DEC_DONE:
 		show_signal_info(signals, sigsz);
 		free(signals);
-		return ACT_DONE;
+		show_sign(SN_ON);
+		/* FALLTHRU */
 	case DEC_SKIP:
 		return ACT_RETY;
 	case DEC_ERRO:
