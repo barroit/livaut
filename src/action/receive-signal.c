@@ -61,10 +61,11 @@ static bool receive_frame(rmt_channel_handle_t _, /* rx channel */
 	BaseType_t unblk;
 
 	/* xQueueSendFromISR returns bool  */
-	receive_result |= !xQueueSendFromISR(ctx, syms, &unblk);
-
-	receive_result |= rmt_receive(rx_channel, rmt_symbols,
-				      sizeof(rmt_symbols), &rmt_config);
+	if (!xQueueSendFromISR(ctx, syms, &unblk))
+		receive_result = -1;
+	else
+		receive_result = rmt_receive(rx_channel, rmt_symbols,
+					     sizeof(rmt_symbols), &rmt_config);
 
 	return unblk;
 }
@@ -117,7 +118,11 @@ static inline void show_signal_info(const u8 *bits, size_t n)
 
 enum action_state receive_signal(void)
 {
-	RS_(receive_result);
+	if (receive_result) {
+		error("receive_frame()",
+		      "ISR has an error occurred (code %d)", receive_result);
+		return ACT_ERRO;
+	}
 
 	rmt_rx_done_event_data_t data;
 	if (!xQueueReceive(incoming_symbols, &data, pdMS_TO_TICKS(1000))) {
