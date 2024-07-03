@@ -6,3 +6,9 @@ microcontroller program for automating aircon/light power switch
 Hardware
 --------
 see HARDWARE
+
+Compare Signals
+--------------
+cd data
+../compare 1.*
+../compare 2.*

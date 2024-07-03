@@ -1,0 +1,24 @@
+#!/usr/bin/bash
+
+for next in $@; do
+	if [[ ! -f $next || ! -r $next ]]; then
+		echo "cannot access ‘$next’"
+		exit 1
+	fi
+
+	if [[ -z $prev ]]; then
+		prev=$next
+		continue
+	fi
+
+	sort -o "$prev.tmp" $prev
+	sort -o "$next.tmp" $next
+
+	comm -12 "$prev.tmp" "$next.tmp" > 'commln'
+
+	rm "$prev.tmp" "$next.tmp"
+	prev='commln'
+done
+
+sort -n -k1 commln
+rm commln
