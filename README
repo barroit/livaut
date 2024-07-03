@@ -7,7 +7,7 @@ Hardware
 --------
 see HARDWARE
 
-Compare Signals
+Compare Frames
 --------------
 cd data
 ../compare 1.*
