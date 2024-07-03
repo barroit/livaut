@@ -194,6 +194,9 @@ enum action_state receive_signal(void)
 	size_t sigsz;
 	switch (decode_aeha_symbols(data.received_symbols,
 		data.num_symbols, &signals, &sigsz)) {
+	case DEC_SKIP:
+		reset_frame_interval();
+		return ACTION_RETY;
 	case DEC_DONE:
 		if (is_interval_set[!next_inter_idx])
 			log_frame_interval();
@@ -201,8 +204,6 @@ enum action_state receive_signal(void)
 		show_signal_info(signals, sigsz);
 		free(signals);
 		show_sign(SN_ON);
-		/* FALLTHRU */
-	case DEC_SKIP:
 		return ACTION_RETY;
 	case DEC_ERRO:
 		return ACTION_ERRO;
