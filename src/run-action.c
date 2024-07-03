@@ -52,21 +52,21 @@ static enum action_state next_state(const struct action *acts,
 				    enum action_state state)
 {
 	switch (state) {
-	case ACT_AGIN:
-	case ACT_RETY:
+	case ACTION_AGIN:
+	case ACTION_RETY:
 		return act->handle();
-	case ACT_INIT:
+	case ACTION_INIT:
 		if (!act)
-			return ACT_INIT;
+			return ACTION_INIT;
 		else if (act->setup(conf))
-			return ACT_ERRO;
+			return ACTION_ERRO;
 
 		print_available_stack();
 		return act->handle();
-	case ACT_CLEN:
+	case ACTION_CLEN:
 		if (act->teardown())
-			return ACT_ERRO;
-		return ACT_INIT;
+			return ACTION_ERRO;
+		return ACTION_INIT;
 	default:
 		abort(/* make gcc happy */);
 	}
@@ -81,17 +81,17 @@ static void show_spinner(u8 *sign)
 static void exec_state(enum action_state state, u8 *sign)
 {
 	switch (state) {
-	case ACT_DONE:
+	case ACTION_DONE:
 		show_sign(SN_ON);
 		break;
-	case ACT_AGIN:
+	case ACTION_AGIN:
 		show_spinner(sign);
 		/* FALLTRHU */
-	case ACT_RETY:
-	case ACT_INIT:
-	case ACT_CLEN:
+	case ACTION_RETY:
+	case ACTION_INIT:
+	case ACTION_CLEN:
 		break;
-	case ACT_ERRO:
+	case ACTION_ERRO:
 		show_sign(SN_OFF);
 		vTaskDelete(NULL);
 	}
@@ -100,7 +100,7 @@ static void exec_state(enum action_state state, u8 *sign)
 void TASK run_action(void *actions)
 {
 	u8 sign = SN_1 | SN_3 | SN_5 | SN_7;
-	enum action_state state = ACT_INIT;
+	enum action_state state = ACTION_INIT;
 	const struct action *acts = actions, *act = NULL;
 	struct action_config conf;
 	const struct action_config conf0 = {
@@ -108,22 +108,22 @@ void TASK run_action(void *actions)
 	};
 
 	while (39) {
-		if (state == ACT_INIT) {
+		if (state == ACTION_INIT) {
 			show_spinner(&sign);
 			act = find_action(acts);
 			if (act)
 				conf = conf0;
 		} else if (find_action(acts) != act) {
-			state = ACT_CLEN;
-		} else if (state == ACT_DONE) {
+			state = ACTION_CLEN;
+		} else if (state == ACTION_DONE) {
 			show_spinner(&sign);
-			state = ACT_AGIN;
+			state = ACTION_AGIN;
 		}
 
 		state = next_state(acts, act, &conf, state);
 		exec_state(state, &sign);
 
-		if (state == ACT_DONE)
+		if (state == ACTION_DONE)
 			vTaskDelay(pdMS_TO_TICKS(conf0.delay));
 		else if (conf.delay)
 			vTaskDelay(pdMS_TO_TICKS(conf.delay));

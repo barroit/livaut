@@ -47,4 +47,6 @@ static inline size_t st_mult(size_t a, size_t b)
 	    (uintmax_t)a, (uintmax_t)b);
 }
 
+#define pin_bit_mask(p) (1ULL << (p))
+
 #endif /* CALC_H */

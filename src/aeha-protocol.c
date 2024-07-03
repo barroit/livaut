@@ -27,10 +27,10 @@
 #include "list.h"
 #include <string.h>
 
-#define AEHA_TOLERANCE     150     /* µm */
-#define AEHA_MIN_THRESHOLD 1250    /* nm */
-#define AEHA_MAX_THRESHOLD 8000000 /* nm */
-#define AEHA_TIME_UNIT     440     /* µm */
+#define AEHA_TOLERANCE     150     /* µs */
+#define AEHA_MIN_THRESHOLD 1250    /* ns */
+#define AEHA_MAX_THRESHOLD 8000000 /* ns */
+#define AEHA_TIME_UNIT     440     /* µs */
 #define AEHA_DATA_OFFSET   7
 
 #define AEHA_T(x) ((x) * AEHA_TIME_UNIT)
@@ -63,7 +63,7 @@ static u8 get_aeha_bit(u16 d1, u16 d2)
 		derr = d2;
 
 	error("aeha decoding",
-	      "illegal symbol found (duration ‘%" PRIu16 "µm’)", derr);
+	      "illegal symbol found (duration ‘%" PRIu16 "µs’)", derr);
 
 	return ~0;
 }

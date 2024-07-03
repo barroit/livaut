@@ -29,14 +29,13 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-enum action_state receive_signal(void);
-int receive_signal_setup(struct action_config *);
-int receive_signal_teardown(void);
+DEFINE_ACTION_SIGNATURE(send_signal);
+DEFINE_ACTION_SIGNATURE(receive_signal);
 
 static const struct action actions[] = {
-	ACT("receive-signal", receive_signal, GPIO_NUM_32, GPIO_NUM_25,
-	    receive_signal_setup, receive_signal_teardown),
-	ACTEND(),
+	ACTION(send_signal,    GPIO_NUM_32, GPIO_NUM_26),
+	ACTION(receive_signal, GPIO_NUM_32, GPIO_NUM_25),
+	ACTION_TAIL(),
 };
 
 void app_main(void)

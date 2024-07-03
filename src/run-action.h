@@ -25,20 +25,19 @@
 
 #include "types.h"
 
-#define ACT(n, h, j1, j2, s, t)			\
-	{ .name = (n), .handle = (h),		\
-	  .jumper = ((j1 << 8) | j2),		\
-	  .setup = (s), .teardown = (t) }
+#define ACTION(n, j1, j2)						\
+	{ .name = (#n), .handle = (n), .jumper = ((j1 << 8) | j2),	\
+	  .setup = (n##_setup), .teardown = (n##_teardown) }
 
-#define ACTEND() { 0 }
+#define ACTION_TAIL() { 0 }
 
 enum action_state {
-	ACT_DONE,
-	ACT_ERRO,
-	ACT_INIT,
-	ACT_AGIN,
-	ACT_RETY,
-	ACT_CLEN,
+	ACTION_DONE,
+	ACTION_ERRO,
+	ACTION_INIT,
+	ACTION_AGIN,
+	ACTION_RETY,
+	ACTION_CLEN,
 };
 
 struct action_config {
@@ -61,5 +60,10 @@ struct action {
 #define J2(j) (j & 0x00FF)
 
 void run_action(void *acts);
+
+#define DEFINE_ACTION_SIGNATURE(n)		\
+	enum action_state n(void);		\
+	int n##_setup(struct action_config *);	\
+	int n##_teardown(void)
 
 #endif /* RUN_ACTION_H */

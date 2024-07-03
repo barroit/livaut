@@ -28,8 +28,7 @@
 #include "freertos/task.h"
 #include "types.h"
 #include "termio.h"
-
-#define pin_mask(p) (1ULL << (p))
+#include "calc.h"
 
 static const u8 jumper_output[] = { JUMPER_HIGH };
 static const u8 jumper_input[]  = { JUMPER_LOW };
@@ -40,7 +39,7 @@ static u64 get_pin_bitmap(const u8 *pins, size_t n)
 	u64 bitmap = 0;
 
 	for_each_idx(i, n)
-		bitmap |= pin_mask(pins[i]);
+		bitmap |= pin_bit_mask(pins[i]);
 
 	return bitmap;
 }

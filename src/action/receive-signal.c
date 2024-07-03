@@ -27,37 +27,38 @@
 #include "freertos/queue.h"
 #include "termio.h"
 #include "sign.h"
+#include "rmt.h"
+#include "driver/gpio.h"
+#include "calc.h"
+#include "esp_timer.h"
+#include <string.h>
 
-#define RS_ ESP_ERROR_CHECK /* alias */
+#define RS ESP_ERROR_CHECK /* alias */
 
-#define CH_CLOCK_RES   1000000 /* channel clock resolution */
-#define CH_CLOCK_SRC   RMT_CLK_SRC_DEFAULT
-#define CH_MEMBLK_SIZE 256
-
-#define BUFFER_SIZE 256
+#define RX_GPIO GPIO_NUM_19
 
 static rmt_channel_handle_t rx_channel;
 static QueueHandle_t incoming_symbols;
-static rmt_symbol_word_t rmt_symbols[BUFFER_SIZE];
+
+#define SYMBOL_BUFFER_SIZE RMT_MBLK_SZ
+
+static rmt_symbol_word_t rmt_symbols[SYMBOL_BUFFER_SIZE];
 static rmt_receive_config_t rmt_config;
+
 static int receive_result;
 
-static void install_rx_channel(void)
-{
-	rmt_rx_channel_config_t conf = {
-		.gpio_num          = GPIO_NUM_19,
-		.clk_src           = CH_CLOCK_SRC,
-		.resolution_hz     = CH_CLOCK_RES,
-		.mem_block_symbols = CH_MEMBLK_SIZE,
-	};
+static u64 frame_interval[2];
+static int is_interval_set[2];
+static u8 next_inter_idx;
 
-	RS_(rmt_new_rx_channel(&conf, &rx_channel));
-}
+#define INTERVAL_TOLERANCE 8270
 
-static bool receive_frame(rmt_channel_handle_t _, /* rx channel */
-			  const rmt_rx_done_event_data_t *syms,
-			  void *ctx)
+static bool IRAM_ATTR copy_received_frame(rmt_channel_handle_t /* channel */,
+					  const rmt_rx_done_event_data_t *syms,
+					  void *ctx)
 {
+	frame_interval[next_inter_idx] = esp_timer_get_time();
+
 	BaseType_t unblk;
 
 	/* xQueueSendFromISR returns bool  */
@@ -70,35 +71,74 @@ static bool receive_frame(rmt_channel_handle_t _, /* rx channel */
 	return unblk;
 }
 
-int receive_signal_setup(struct action_config *conf)
+static void init_rx_channel(void)
 {
-	install_rx_channel();
+	rmt_rx_channel_config_t conf = {
+		.gpio_num          = RX_GPIO,
+		.clk_src           = RMT_CLK_SRC,
+		.resolution_hz     = RMT_CLK_RES,
+		.mem_block_symbols = RMT_MBLK_SZ,
+	};
+
+	RS(rmt_new_rx_channel(&conf, &rx_channel));
 
 	rmt_rx_event_callbacks_t cb = {
-		.on_recv_done = receive_frame,
+		.on_recv_done = copy_received_frame,
 	};
+
+	RS(rmt_rx_register_event_callbacks(rx_channel, &cb,
+					   incoming_symbols));
+
+	RS(rmt_enable(rx_channel));
+}
+
+static void IRAM_ATTR receive_first_signal(void *)
+{
+	u8 idx = next_inter_idx;
+	if (frame_interval[idx]) {
+		frame_interval[idx] = esp_timer_get_time() -
+				      frame_interval[idx];
+		is_interval_set[idx] = 1;
+		next_inter_idx = !idx;
+	}
+
+	gpio_intr_disable(RX_GPIO);
+}
+
+static void config_rx_gpio(void)
+{
+	RS(gpio_install_isr_service(ESP_INTR_FLAG_IRAM));
+
+	RS(gpio_isr_handler_add(RX_GPIO, receive_first_signal, NULL));
+
+	gpio_set_intr_type(RX_GPIO, GPIO_INTR_NEGEDGE);
+
+	gpio_intr_enable(RX_GPIO);
+}
+
+int receive_signal_setup(struct action_config *conf)
+{
+	conf->delay = 0; /* we apply delay from receive_signal() */
 
 	incoming_symbols = xQueueCreate(8, sizeof(rmt_rx_done_event_data_t));
 
-	RS_(rmt_rx_register_event_callbacks(rx_channel, &cb,
-					    incoming_symbols));
+	init_rx_channel();
 
-	RS_(rmt_enable(rx_channel));
+	config_rx_gpio();
 
 	make_aeha_receiver_config(&rmt_config);
 
-	conf->delay = 0; /* we apply delay from receive_signal() */
-	info("receive_signal_setup()", "ok");
+	RS(rmt_receive(rx_channel, rmt_symbols,
+		       sizeof(rmt_symbols), &rmt_config));
 
-	RS_(rmt_receive(rx_channel, rmt_symbols,
-			sizeof(rmt_symbols), &rmt_config));
+	info("receive_signal_setup()", "ok");
 	return 0;
 }
 
 int receive_signal_teardown(void)
 {
-	RS_(rmt_disable(rx_channel));
-	RS_(rmt_del_channel(rx_channel));
+	RS(rmt_disable(rx_channel));
+	RS(rmt_del_channel(rx_channel));
 
 	vQueueDelete(incoming_symbols);
 
@@ -116,32 +156,56 @@ static inline void show_signal_info(const u8 *bits, size_t n)
 	fflush(stdout);
 }
 
+static void log_frame_interval(void)
+{
+	u8 idx = !next_inter_idx;
+	info("receive_signal()",
+	     "interval between two frames is %" PRIu64 "ms",
+	     (frame_interval[idx] + INTERVAL_TOLERANCE) / 1000);
+
+	frame_interval[idx] = 0;
+	is_interval_set[idx] = 0;
+}
+
+static void reset_frame_interval(void)
+{
+	memset(frame_interval, 0, sizeof(frame_interval));
+	memset(is_interval_set, 0, sizeof(is_interval_set));
+	next_inter_idx = 0;
+}
+
 enum action_state receive_signal(void)
 {
 	if (receive_result) {
-		error("receive_frame()",
+		error("copy_received_frame()",
 		      "ISR has an error occurred (code %d)", receive_result);
-		return ACT_ERRO;
+		return ACTION_ERRO;
 	}
 
 	rmt_rx_done_event_data_t data;
 	if (!xQueueReceive(incoming_symbols, &data, pdMS_TO_TICKS(1000))) {
-		return ACT_AGIN;
+		reset_frame_interval();
+		return ACTION_AGIN;
 	}
+
+	gpio_intr_enable(RX_GPIO);
 
 	u8 *signals;
 	size_t sigsz;
 	switch (decode_aeha_symbols(data.received_symbols,
 		data.num_symbols, &signals, &sigsz)) {
 	case DEC_DONE:
+		if (is_interval_set[!next_inter_idx])
+			log_frame_interval();
+
 		show_signal_info(signals, sigsz);
 		free(signals);
 		show_sign(SN_ON);
 		/* FALLTHRU */
 	case DEC_SKIP:
-		return ACT_RETY;
+		return ACTION_RETY;
 	case DEC_ERRO:
-		return ACT_ERRO;
+		return ACTION_ERRO;
 	}
 
 	return 0; /* make gcc happy */

@@ -20,29 +20,13 @@
 **
 ****************************************************************************/
 
-#ifndef AEHA_PROTOCOL_H
-#define AEHA_PROTOCOL_H
+#ifndef RMT_H
+#define RMT_H
 
-#include "driver/rmt_rx.h"
-#include "driver/rmt_tx.h"
-#include "types.h"
+#include "soc/clk_tree_defs.h"
 
-#define AEHA_DUTY_CYCLE 0.33
-#define AEHA_FREQUENCY  38000 /* hz */
+#define RMT_CLK_RES 1000000             /* clock resolution, 1 µs */
+#define RMT_CLK_SRC RMT_CLK_SRC_DEFAULT
+#define RMT_MBLK_SZ 256                 /* memory block size */
 
-enum decoder_state {
-	DEC_DONE,
-	DEC_SKIP,
-	DEC_ERRO,
-};
-
-struct aeha_frame {
-	u32 leader;
-};
-
-enum decoder_state decode_aeha_symbols(rmt_symbol_word_t *s, size_t n,
-				       u8 **buf, size_t *sz);
-
-void make_aeha_receiver_config(rmt_receive_config_t *conf);
-
-#endif /* AEHA_PROTOCOL_H */
+#endif
