@@ -99,23 +99,23 @@ void print_bit_dump(const u8 *bitmap, size_t n)
 	strbuf_free(&sb);
 }
 
-void print_checksum(const u8 *bitmap, size_t n)
-{
-	size_t i;
-	u16 sum = 0;
-	u8 tmp = 0;
-	for_each_idx(i, n) {
-		if (bitmap[i])
-			tmp |= (1 << (i % 8));
+// void print_checksum(const u8 *bitmap, size_t n)
+// {
+// 	size_t i;
+// 	u16 sum = 0;
+// 	u8 tmp = 0;
+// 	for_each_idx(i, n) {
+// 		if (bitmap[i])
+// 			tmp |= (1 << (i % 8));
 
-		if (is_byte_tail(i)) {
-			sum += tmp;
-			tmp = 0;
-		}
-	}
+// 		if (is_byte_tail(i)) {
+// 			sum += tmp;
+// 			tmp = 0;
+// 		}
+// 	}
 
-	sum &= 0x00FF;
-	printf("checksum: 0x%c%c\n",
-	       hex_char_map[(sum >> 4) & 0x0F],
-	       hex_char_map[sum & 0x0F]);
-}
+// 	sum &= 0x00FF;
+// 	printf("checksum: 0x%c%c\n",
+// 	       hex_char_map[(sum >> 4) & 0x0F],
+// 	       hex_char_map[sum & 0x0F]);
+// }

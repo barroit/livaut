@@ -146,16 +146,6 @@ int receive_signal_teardown(void)
 	return 0;
 }
 
-static inline void show_signal_info(const u8 *bits, size_t n)
-{
-	print_bit_dump(bits, n);
-
-	/* for verify purpose */
-	print_checksum(bits, n - 1);
-
-	fflush(stdout);
-}
-
 static void log_frame_interval(void)
 {
 	u8 idx = !next_inter_idx;
@@ -172,6 +162,19 @@ static void reset_frame_interval(void)
 	memset(frame_interval, 0, sizeof(frame_interval));
 	memset(is_interval_set, 0, sizeof(is_interval_set));
 	next_inter_idx = 0;
+}
+
+static void handle_decoded_signals(u8 *bitmap, size_t n)
+{
+	if (is_interval_set[!next_inter_idx])
+		log_frame_interval();
+
+	print_bit_dump(bitmap, n);
+	putchar('\n');
+
+	fflush(stdout);
+	free(bitmap);
+	show_sign(SN_ON);
 }
 
 enum action_state receive_signal(void)
@@ -198,12 +201,7 @@ enum action_state receive_signal(void)
 		reset_frame_interval();
 		return ACTION_RETY;
 	case DEC_DONE:
-		if (is_interval_set[!next_inter_idx])
-			log_frame_interval();
-
-		show_signal_info(signals, sigsz);
-		free(signals);
-		show_sign(SN_ON);
+		handle_decoded_signals(signals, sigsz);
 		return ACTION_RETY;
 	case DEC_ERRO:
 		return ACTION_ERRO;
