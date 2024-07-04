@@ -26,12 +26,12 @@
 #include "calc.h"
 #include "list.h"
 #include <string.h>
+#include "esp_attr.h"
 
 #define AEHA_TOLERANCE     150     /* µs */
 #define AEHA_MIN_THRESHOLD 1250    /* ns */
 #define AEHA_MAX_THRESHOLD 8000000 /* ns */
 #define AEHA_TIME_UNIT     440     /* µs */
-#define AEHA_DATA_OFFSET   7
 
 #define AEHA_T(x) ((x) * AEHA_TIME_UNIT)
 
@@ -114,4 +114,170 @@ void make_aeha_receiver_config(rmt_receive_config_t *conf)
 
 	conf->signal_range_min_ns = AEHA_MIN_THRESHOLD;
 	conf->signal_range_max_ns = AEHA_MAX_THRESHOLD;
+}
+
+enum encoder_state {
+	ENCODE_LEADER,
+	ENCODE_CUSTOMER,
+	ENCODE_DATA,
+	ENCODE_TAILER,
+};
+
+struct encoder_context {
+	rmt_encoder_t base;
+	rmt_encoder_t *copy_encoder;
+	rmt_encoder_t *byte_encoder;
+	rmt_symbol_word_t leading_symbol;
+	rmt_symbol_word_t tailing_symbol;
+	enum encoder_state state;
+};
+
+#define encoder_context_of(c) \
+	__containerof(c, struct encoder_context, base)
+
+#define handle_encode_result_normal(s, c)	\
+	({					\
+		if (s & RMT_ENCODING_COMPLETE)	\
+			c->state++;		\
+		s & RMT_ENCODING_MEM_FULL;	\
+	})
+
+static size_t IRAM_ATTR encode_frame(rmt_encoder_t *container,
+				     rmt_channel_handle_t channel,
+				     const void *rd, size_t /* unused */,
+				     rmt_encode_state_t *state)
+{
+	struct encoder_context *ctx = encoder_context_of(container);
+	rmt_encoder_t *cpenc = ctx->copy_encoder;
+	rmt_encoder_t *btenc = ctx->byte_encoder;
+	const struct aeha_frame *frame = rd;
+	size_t symlen = 0;
+
+	switch (ctx->state) {
+	case ENCODE_LEADER:
+		symlen += cpenc->encode(cpenc, channel, &ctx->leading_symbol,
+					sizeof(rmt_symbol_word_t), state);
+		if (handle_encode_result_normal(*state, ctx))
+			break;
+		/* FALLTHRU */
+	case ENCODE_CUSTOMER:
+		/**
+		 * we just need to manage the state; the copy and byte
+		 * encoder handle data truncation recovery
+		 */
+		symlen += btenc->encode(btenc, channel, frame->cuscode,
+					frame->clen, state);
+		if (handle_encode_result_normal(*state, ctx))
+			break;
+		/* FALLTHRU */
+	case ENCODE_DATA:
+		symlen += btenc->encode(btenc, channel, frame->usrdata,
+					frame->ulen, state);
+		if (handle_encode_result_normal(*state, ctx))
+			break;
+		/* FALLTHRU */
+	case ENCODE_TAILER:
+		symlen += cpenc->encode(cpenc, channel, &ctx->tailing_symbol,
+					sizeof(rmt_symbol_word_t), state);
+		if (*state & RMT_ENCODING_COMPLETE)
+			ctx->state = RMT_ENCODING_RESET;
+	}
+
+	return symlen;
+}
+
+static int free_encoder(rmt_encoder_t *container)
+{
+	struct encoder_context *ctx = encoder_context_of(container);
+
+	rmt_del_encoder(ctx->copy_encoder);
+	rmt_del_encoder(ctx->byte_encoder);
+	free(ctx);
+
+	return 0;
+}
+
+static int reset_encoder(rmt_encoder_t *container)
+{
+	struct encoder_context *ctx = encoder_context_of(container);
+
+	rmt_encoder_reset(ctx->copy_encoder);
+	rmt_encoder_reset(ctx->byte_encoder);
+	ctx->state = RMT_ENCODING_RESET;
+
+	return 0;
+}
+
+#define mae_error(...) error("make_aeha_encoder()", ##__VA_ARGS__)
+
+#define MKSYMB(t0, t1)				\
+	{					\
+		.level0    = 1,			\
+		.duration0 = AEHA_T(t0),	\
+		.level1    = 0,			\
+		.duration1 = AEHA_T(t1),	\
+	}
+
+static int make_encoder_context(struct encoder_context **ctx)
+{
+	/* rmt_alloc_encoder_mem uses calloc() */
+	*ctx = rmt_alloc_encoder_mem(sizeof(struct encoder_context));
+	if (!*ctx)
+		return ESP_ERR_NO_MEM;
+
+	struct encoder_context *c = *ctx;
+
+	c->base.encode = encode_frame;
+	c->base.del    = free_encoder;
+	c->base.reset  = reset_encoder;
+
+	c->leading_symbol = (rmt_symbol_word_t)MKSYMB(8, 4);
+	c->tailing_symbol = (rmt_symbol_word_t)MKSYMB(1, 0);
+
+	return 0;
+}
+
+static int init_copy_encoder(struct encoder_context *ctx)
+{
+	rmt_copy_encoder_config_t conf; /* fake config */
+	return rmt_new_copy_encoder(&conf, &ctx->copy_encoder);
+}
+
+static int init_byte_encoder(struct encoder_context *ctx)
+{
+	rmt_bytes_encoder_config_t conf = {
+		.bit0 = MKSYMB(1, 1),
+		.bit1 = MKSYMB(1, 3),
+	};
+
+	return rmt_new_bytes_encoder(&conf, &ctx->byte_encoder);
+}
+
+int make_aeha_encoder(rmt_encoder_handle_t *encoder)
+{
+	struct encoder_context *ctx;
+
+	int res = make_encoder_context(&ctx);
+	if (res)
+		goto err_make_enc_ctx;
+
+	res = init_copy_encoder(ctx);
+	if (res)
+		goto err_init_cp_enc;
+
+	res = init_byte_encoder(ctx);
+	if (res)
+		goto err_init_bt_enc;
+
+	*encoder = &ctx->base;
+	return 0;
+
+err_init_bt_enc:
+	rmt_del_encoder(ctx->copy_encoder);
+
+err_init_cp_enc:
+	free(ctx);
+
+err_make_enc_ctx:
+	return res;
 }

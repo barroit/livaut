@@ -81,5 +81,29 @@ int send_signal_teardown(void)
 
 enum action_state send_signal(void)
 {
+	rmt_encoder_handle_t encoder;
+	RS(make_aeha_encoder(&encoder));
+
+	u8 cuscode[] = {
+		0x2C,
+		0x52,
+	}, data[] = {
+		0x09,
+		0x2C,
+		0x25,
+	};
+
+	struct aeha_frame frame = {
+		.cuscode = cuscode,
+		.clen    = sizeof(cuscode),
+		.usrdata = data,
+		.ulen    = sizeof(data),
+	};
+
+	rmt_transmit_config_t conf = { 0 };
+	RS(rmt_transmit(tx_channel, encoder, &frame, ~0, &conf));
+
+	RS(encoder->del(encoder));
+
 	return ACTION_DONE;
 }

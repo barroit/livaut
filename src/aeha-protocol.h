@@ -27,22 +27,27 @@
 #include "driver/rmt_tx.h"
 #include "types.h"
 
-#define AEHA_DUTY_CYCLE 0.33
-#define AEHA_FREQUENCY  38000 /* hz */
-
 enum decoder_state {
 	DEC_DONE,
 	DEC_SKIP,
 	DEC_ERRO,
 };
 
-struct aeha_frame {
-	u32 leader;
-};
-
 enum decoder_state decode_aeha_symbols(rmt_symbol_word_t *s, size_t n,
 				       u8 **buf, size_t *sz);
 
 void make_aeha_receiver_config(rmt_receive_config_t *conf);
+
+#define AEHA_DUTY_CYCLE 0.33
+#define AEHA_FREQUENCY  38000 /* hz */
+
+struct aeha_frame {
+	u8 *cuscode; /* customer code */
+	size_t clen;
+	u8 *usrdata;
+	size_t ulen;
+};
+
+int make_aeha_encoder(rmt_encoder_handle_t *encoder);
 
 #endif /* AEHA_PROTOCOL_H */

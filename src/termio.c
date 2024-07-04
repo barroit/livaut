@@ -75,7 +75,7 @@ static void do_print_hex_dump(struct strbuf *sb, const u8 *bitmap,
 	}
 }
 
-void print_bit_dump(const u8 *bitmap, size_t n)
+void print_frame_dump(const u8 *bitmap, size_t n)
 {
 	struct strbuf sb;
 	strbuf_init(&sb, n);

@@ -7,22 +7,5 @@
 			"project": "livaut",
 			"year": "2024"
 		}
-	},
-	"files.associations": {
-		".gdb*": "plaintext",
-		"README": "plaintext",
-		"ir_nec_encoder.h": "c",
-		"rmt.h": "c",
-		"i2c_master.h": "c",
-		"gpio.h": "c",
-		"types.h": "c",
-		"freertos.h": "c",
-		"task.h": "c",
-		"calc.h": "c",
-		"esp_timer.h": "c",
-		"clk_tree_defs.h": "c",
-		"aeha-protocol.h": "c",
-		"termio.h": "c",
-		"numbers": "cpp"
 	}
 }

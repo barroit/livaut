@@ -28,7 +28,7 @@
 #include "esp_err.h"
 #include <stdlib.h>
 
-void print_bit_dump(const u8 *bitmap, size_t n);
+void print_frame_dump(const u8 *bitmap, size_t n);
 
 void print_checksum(const u8 *bitmap, size_t n);
 
