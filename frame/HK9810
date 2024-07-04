@@ -1,0 +1,59 @@
+Panasonic HK9810
+================
+
+  0	|  0  0  1  1  |  0  1  0  0  |  C  2  |  Customer Code
+  1	|  0  1  0  0  |  1  0  1  0  |  2  5  |  Customer Code
+  2	|  1  0  0  1  |  1  1  0  0  |  9  3  |  Collapse Area Indicator
+  3	|  1  1  0  1  |  1  0  1  1  |  B  D  |  Data
+  4	|  0  1  0  0  |  0  1  1  1  |  2  E  |  Data
+
+Collapse Area Indicator is used to indicate whether the frame is sent by
+pressing a collapse area button, such as ‘おやすみ３０分’ or ‘チャンネル確定’
+(msb -> lsb)
+	true:  0x39
+	false: 0x09
+
+Data Section
+------------
+data hex code is shown in lsb -> msb
+ch(n) stands for channel n
+
+全灯
+	ch1	ch2	ch3
+0x	C 2	4 3	C 3
+0x	5 2	D 3	5 3
+
+消灯
+	ch1	ch2	ch3
+0x	F 2	7 3	F 3
+0x	6 2	E 3	6 3
+
+普段
+	ch1	ch2	ch3
+0x	D 2	5 3	D 3
+0x	4 2	C 3	4 3
+
+常夜灯
+	ch1	ch2	ch3
+0x	E 2	6 3	E 3
+0x	7 2	F 3	7 3
+
+明るい
+	ch1	ch2	ch3
+0x	A 2	2 3	A 3
+0x	3 2	B 3	3 3
+
+暗い
+	ch1	ch2	ch3
+0x	B 2	3 3	B 3
+0x	2 2	A 3	2 3
+
+おやすみ３０分
+	ch1	ch2	ch3
+0x	1 A	A A	3 B
+0x	8 9	3 9	A 8
+
+チャンネル確定
+	ch1	ch2	ch3
+0x	A D	B D	C D
+0x	3 E	2 E	5 E
