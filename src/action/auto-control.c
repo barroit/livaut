@@ -31,6 +31,7 @@
 #define TRANSFER_QUEUE_DEPTH 3
 
 static rmt_channel_handle_t tx_channel;
+static rmt_encoder_handle_t encoder;
 
 static int install_tx_channel(void)
 {
@@ -60,7 +61,7 @@ static int configure_tx_carrier(void)
 	return rmt_apply_carrier(tx_channel, &conf);
 }
 
-int send_signal_setup(struct action_config *)
+int auto_control_setup(struct action_config *)
 {
 	RS(install_tx_channel());
 
@@ -68,42 +69,49 @@ int send_signal_setup(struct action_config *)
 
 	RS(rmt_enable(tx_channel));
 
+	RS(make_aeha_encoder(&encoder));
+
 	return 0;
 }
 
-int send_signal_teardown(void)
+int auto_control_teardown(void)
 {
 	RS(rmt_disable(tx_channel));
 	RS(rmt_del_channel(tx_channel));
+	RS(encoder->del(encoder));
 
 	return 0;
 }
 
-enum action_state send_signal(void)
+struct frame_task {
+	struct aeha_frame frame;
+	u64 time_start;
+};
+
+static struct frame_task tasks[];
+static u8 next_task;
+
+static void create_tasks(void)
 {
-	rmt_encoder_handle_t encoder;
-	RS(make_aeha_encoder(&encoder));
+	//
+}
 
-	u8 cuscode[] = {
-		0x2C,
-		0x52,
-	}, data[] = {
-		0x09,
-		0x2C,
-		0x25,
-	};
-
-	struct aeha_frame frame = {
-		.cuscode = cuscode,
-		.clen    = sizeof(cuscode),
-		.usrdata = data,
-		.ulen    = sizeof(data),
-	};
-
+static void transmit_signal(struct aeha_frame *frame)
+{
 	rmt_transmit_config_t conf = { 0 };
-	RS(rmt_transmit(tx_channel, encoder, &frame, ~0, &conf));
+	RS(rmt_transmit(tx_channel, encoder, frame, ~0, &conf));
+}
 
-	RS(encoder->del(encoder));
+enum action_state auto_control(void)
+{
+	// struct aeha_frame signal = {
+	// 	.cuscode = cuscode,
+	// 	.clen    = sizeof(cuscode),
+	// 	.usrdata = data,
+	// 	.ulen    = sizeof(data),
+	// };
+
+	// transmit_signal(&signal);
 
 	return ACTION_DONE;
 }

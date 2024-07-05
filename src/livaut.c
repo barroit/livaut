@@ -29,11 +29,11 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-DEFINE_ACTION_SIGNATURE(send_signal);
+DEFINE_ACTION_SIGNATURE(auto_control);
 DEFINE_ACTION_SIGNATURE(receive_signal);
 
 static const struct action actions[] = {
-	ACTION(send_signal,    GPIO_NUM_32, GPIO_NUM_26),
+	ACTION(auto_control,   GPIO_NUM_32, GPIO_NUM_26),
 	ACTION(receive_signal, GPIO_NUM_32, GPIO_NUM_25),
 	ACTION_TAIL(),
 };

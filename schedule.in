@@ -1,0 +1,29 @@
+# Comment
+# =======
+# 08:00:00 - Time when the frame is sent.
+# 08:00:00	2C 52
+# 		09 2C 25
+# 35 - Delay (interval, in ms) before sending the following frame.
+# 35		11 DA 27 00
+# Comment between definitions is allowed
+# 		00 38 34 00 AF 00 00
+# As the data section grows larger, readability suffers; therefore,
+# wrapping is supported ;)
+# 		06 60 00 00 C3 00 00 56
+# An empty line is used to reset the parser state.
+
+08:00:00	2C 52
+		09 2C 25
+
+08:30:00	11 DA 27 00
+		02 00 00 00 00 02 00 80 01 00 00 00 00 00 00 97
+35		11 DA 27 00
+		00 38 34 00 AF 00 00 06 60 00 00 C3 00 00 56
+
+08:30:10	2C 52
+		09 2F 26
+
+13:30:00	11 DA 27 00
+		02 00 00 00 00 0E 00 00 01 00 00 00 00 00 00 23
+35		11 DA 27 00
+		00 39 34 00 AF 00 00 06 60 00 00 C3 00 00 57
