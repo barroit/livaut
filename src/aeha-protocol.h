@@ -27,6 +27,8 @@
 #include "driver/rmt_tx.h"
 #include "types.h"
 
+#include "signal-schedule.h"
+
 enum decoder_state {
 	DEC_DONE,
 	DEC_SKIP,
@@ -40,13 +42,6 @@ void make_aeha_receiver_config(rmt_receive_config_t *conf);
 
 #define AEHA_DUTY_CYCLE 0.33
 #define AEHA_FREQUENCY  38000 /* hz */
-
-struct aeha_frame {
-	u8 *cuscode; /* customer code */
-	size_t clen;
-	u8 *usrdata;
-	size_t ulen;
-};
 
 int make_aeha_encoder(rmt_encoder_handle_t *encoder);
 

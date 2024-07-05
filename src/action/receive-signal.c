@@ -135,10 +135,21 @@ int receive_signal_setup(struct action_config *conf)
 	return 0;
 }
 
+static void reset_rx_gpio(void)
+{
+	gpio_intr_disable(RX_GPIO);
+
+	RS(gpio_isr_handler_remove(RX_GPIO));
+
+	gpio_uninstall_isr_service();
+}
+
 int receive_signal_teardown(void)
 {
 	RS(rmt_disable(rx_channel));
 	RS(rmt_del_channel(rx_channel));
+
+	reset_rx_gpio();
 
 	vQueueDelete(incoming_symbols);
 

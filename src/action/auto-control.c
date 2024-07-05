@@ -32,6 +32,7 @@
 
 static rmt_channel_handle_t tx_channel;
 static rmt_encoder_handle_t encoder;
+static u8 next_schedule; 
 
 static int install_tx_channel(void)
 {
@@ -83,20 +84,7 @@ int auto_control_teardown(void)
 	return 0;
 }
 
-struct frame_task {
-	struct aeha_frame frame;
-	u64 time_start;
-};
-
-static struct frame_task tasks[];
-static u8 next_task;
-
-static void create_tasks(void)
-{
-	//
-}
-
-static void transmit_signal(struct aeha_frame *frame)
+static void transmit_signal(frame_info_t *frame)
 {
 	rmt_transmit_config_t conf = { 0 };
 	RS(rmt_transmit(tx_channel, encoder, frame, ~0, &conf));
@@ -104,14 +92,6 @@ static void transmit_signal(struct aeha_frame *frame)
 
 enum action_state auto_control(void)
 {
-	// struct aeha_frame signal = {
-	// 	.cuscode = cuscode,
-	// 	.clen    = sizeof(cuscode),
-	// 	.usrdata = data,
-	// 	.ulen    = sizeof(data),
-	// };
-
-	// transmit_signal(&signal);
-
+	printf("%u\n", schedules[0].fnum);
 	return ACTION_DONE;
 }

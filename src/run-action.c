@@ -123,7 +123,7 @@ void TASK run_action(void *actions)
 		state = next_state(acts, act, &conf, state);
 		exec_state(state, &sign);
 
-		if (state == ACTION_DONE)
+		if (state == ACTION_DONE || state == ACTION_INIT)
 			vTaskDelay(pdMS_TO_TICKS(conf0.delay));
 		else if (conf.delay)
 			vTaskDelay(pdMS_TO_TICKS(conf.delay));

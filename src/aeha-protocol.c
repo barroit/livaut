@@ -150,7 +150,7 @@ static size_t IRAM_ATTR encode_frame(rmt_encoder_t *container,
 	struct encoder_context *ctx = encoder_context_of(container);
 	rmt_encoder_t *cpenc = ctx->copy_encoder;
 	rmt_encoder_t *btenc = ctx->byte_encoder;
-	const struct aeha_frame *frame = rd;
+	const struct frame_info *frame = rd;
 	size_t symlen = 0;
 
 	switch (ctx->state) {
@@ -165,14 +165,15 @@ static size_t IRAM_ATTR encode_frame(rmt_encoder_t *container,
 		 * we just need to manage the state; the copy and byte
 		 * encoder handle data truncation recovery
 		 */
-		symlen += btenc->encode(btenc, channel, frame->cuscode,
-					frame->clen, state);
+		symlen += btenc->encode(btenc, channel, frame->data,
+					frame->cnum, state);
 		if (handle_encode_result_normal(*state, ctx))
 			break;
 		/* FALLTHRU */
 	case ENCODE_DATA:
-		symlen += btenc->encode(btenc, channel, frame->usrdata,
-					frame->ulen, state);
+		symlen += btenc->encode(btenc, channel,
+					frame->data + frame->cnum,
+					frame->unum, state);
 		if (handle_encode_result_normal(*state, ctx))
 			break;
 		/* FALLTHRU */

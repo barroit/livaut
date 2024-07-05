@@ -1,0 +1,14 @@
+set(SCHEDULE_INPUT "${CMAKE_SOURCE_DIR}/schedule.in")
+set(SCHEDULE_OUTPUT "signal-schedule.h")
+set(SCHEDULE_EXEC "${CMAKE_SOURCE_DIR}/make-schedule")
+set(SCHEDULE_CMD "${SCHEDULE_EXEC} ${SCHEDULE_INPUT} >${SCHEDULE_OUTPUT}")
+
+add_custom_command(OUTPUT ${SCHEDULE_OUTPUT}
+		   COMMAND bash -c "${SCHEDULE_CMD}"
+		   DEPENDS ${SCHEDULE_INPUT})
+
+add_custom_target(schedule DEPENDS ${SCHEDULE_OUTPUT})
+add_dependencies(${COMPONENT_LIB} schedule)
+
+set_property(DIRECTORY ${COMPONENT_DIR} APPEND PROPERTY
+	     ADDITIONAL_CLEAN_FILES ${SCHEDULE_OUTPUT})

@@ -9,3 +9,5 @@ idf_component_register(SRCS ${livaut_source}
 add_compile_definitions(LIVAUT_DEBUG _POSIX_C_SOURCE=200809L)
 
 configure_file(../jumper.conf jumper-layout.h)
+
+include(../schedule.cmake)
