@@ -53,4 +53,6 @@ void print_checksum(const u8 *bitmap, size_t n);
 #define info(t, f, ...) \
 	ESP_LOGI(t, f, ##__VA_ARGS__)
 
+void print_task_avail_stack(const char *tag, void *tsk);
+
 #endif /* TERMIO_H */

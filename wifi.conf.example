@@ -1,0 +1,11 @@
+#ifdef WIFI_SSID
+#error "WIFI_SSID should only be defined in wifi.conf"
+#endif
+
+#define WIFI_SSID "wifi-ssid"
+
+#ifdef WIFI_PASS
+#error "WIFI_PASS should only be defined in wifi.conf"
+#endif
+
+#define WIFI_PASS "wifi-pass"

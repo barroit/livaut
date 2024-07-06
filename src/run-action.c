@@ -39,13 +39,6 @@ static const struct action *find_action(const struct action *acts)
 	return NULL;
 }
 
-static INTASK void print_available_stack(void)
-{
-	info("run_action",
-	     "available stack size is %" PRIu16 " words\n",
-	     uxTaskGetStackHighWaterMark(NULL));
-}
-
 static enum action_state next_state(const struct action *acts,
 				    const struct action *act,
 				    struct action_config *conf,
@@ -61,7 +54,7 @@ static enum action_state next_state(const struct action *acts,
 		else if (act->setup(conf))
 			return ACTION_ERRO;
 
-		print_available_stack();
+		print_task_avail_stack("action_exec", NULL);
 		return act->handle();
 	case ACTION_CLEN:
 		if (act->teardown())

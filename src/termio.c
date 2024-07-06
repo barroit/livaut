@@ -20,10 +20,13 @@
 **
 ****************************************************************************/
 
+#include "termio.h"
 #include <stdio.h>
 #include <inttypes.h>
 #include "list.h"
 #include "strbuf.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 #define bit_pos_mask(a) (a % 8)
 #define is_byte_head(a) (bit_pos_mask(a) == 0)
@@ -119,3 +122,9 @@ void print_frame_dump(const u8 *bitmap, size_t n)
 // 	       hex_char_map[(sum >> 4) & 0x0F],
 // 	       hex_char_map[sum & 0x0F]);
 // }
+
+void print_task_avail_stack(const char *tag, void *tsk)
+{
+	info(tag, "available stack size is %" PRIu16 " words\n",
+	     uxTaskGetStackHighWaterMark((TaskHandle_t)tsk));
+}

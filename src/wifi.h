@@ -20,45 +20,11 @@
 **
 ****************************************************************************/
 
-#include "bus.h"
-#include "sign.h"
-#include "debug.h"
-#include "jumper.h"
-#include "run-action.h"
-#include "soc/gpio_num.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "wifi.h"
-#include "nvs.h"
+#ifndef WIFI_H
+#define WIFI_H
 
-DEFINE_ACTION_SIGNATURE(auto_control);
-DEFINE_ACTION_SIGNATURE(receive_signal);
+void setup_wifi_task(void *);
 
-static const struct action actions[] = {
-	ACTION(auto_control,   GPIO_NUM_32, GPIO_NUM_26),
-	ACTION(receive_signal, GPIO_NUM_32, GPIO_NUM_25),
-	ACTION_TAIL(),
-};
+int is_wifi_connected(void);
 
-void app_main(void)
-{
-	if (init_nvs_flash())
-		goto setup_jumper;
-
-	xTaskCreate(setup_wifi_task, "wifi_init", 1024, NULL, 10, NULL);
-
-setup_jumper:
-	config_jumper();
-
-	if (install_mst_bus())
-		goto do_action;
-
-	debugging()
-		bus_dev_scan_7bit();
-
-	if (init_sign())
-		uninstall_mst_bus();
-
-do_action:
-	xTaskCreate(run_action, "action_exec", 3072, (void *)actions, 15, NULL);
-}
+#endif /* WIFI_H */

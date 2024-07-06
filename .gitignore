@@ -1,7 +1,4 @@
 build/
 sdkconfig.old
-a
-b
 tmp/
-warnings.txt
-src/
+wifi.conf

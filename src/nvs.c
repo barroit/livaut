@@ -20,45 +20,21 @@
 **
 ****************************************************************************/
 
-#include "bus.h"
-#include "sign.h"
-#include "debug.h"
-#include "jumper.h"
-#include "run-action.h"
-#include "soc/gpio_num.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "wifi.h"
 #include "nvs.h"
+#include "nvs_flash.h"
 
-DEFINE_ACTION_SIGNATURE(auto_control);
-DEFINE_ACTION_SIGNATURE(receive_signal);
+#define RS ESP_ERROR_CHECK
 
-static const struct action actions[] = {
-	ACTION(auto_control,   GPIO_NUM_32, GPIO_NUM_26),
-	ACTION(receive_signal, GPIO_NUM_32, GPIO_NUM_25),
-	ACTION_TAIL(),
-};
-
-void app_main(void)
+int init_nvs_flash(void)
 {
-	if (init_nvs_flash())
-		goto setup_jumper;
+	int err;
 
-	xTaskCreate(setup_wifi_task, "wifi_init", 1024, NULL, 10, NULL);
+	err = nvs_flash_init();
+	if (err == ESP_ERR_NVS_NO_FREE_PAGES ||
+	    err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+		RS(nvs_flash_erase());
+		err = nvs_flash_init();
+	}
 
-setup_jumper:
-	config_jumper();
-
-	if (install_mst_bus())
-		goto do_action;
-
-	debugging()
-		bus_dev_scan_7bit();
-
-	if (init_sign())
-		uninstall_mst_bus();
-
-do_action:
-	xTaskCreate(run_action, "action_exec", 3072, (void *)actions, 15, NULL);
+	return ESP_ERROR_CHECK_WITHOUT_ABORT(err);
 }

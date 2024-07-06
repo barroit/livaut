@@ -93,6 +93,5 @@ static void transmit_signal(frame_info_t *frame)
 
 enum action_state auto_control(void)
 {
-	printf("%u\n", schedules[0].fnum);
 	return ACTION_DONE;
 }
