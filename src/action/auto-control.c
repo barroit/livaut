@@ -24,6 +24,7 @@
 #include "aeha-protocol.h"
 #include "rmt.h"
 #include "termio.h"
+#include "signal-schedule.h"
 
 #define RS ESP_ERROR_CHECK
 

@@ -26,8 +26,7 @@
 #include "driver/rmt_rx.h"
 #include "driver/rmt_tx.h"
 #include "types.h"
-
-#include "signal-schedule.h"
+#include "signal-schedule-def.h"
 
 enum decoder_state {
 	DEC_DONE,
