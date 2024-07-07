@@ -130,6 +130,7 @@ struct encoder_context {
 	rmt_symbol_word_t leading_symbol;
 	rmt_symbol_word_t tailing_symbol;
 	enum encoder_state state;
+	size_t pending;
 };
 
 #define encoder_context_of(c) \
@@ -144,13 +145,13 @@ struct encoder_context {
 
 static size_t IRAM_ATTR encode_frame(rmt_encoder_t *container,
 				     rmt_channel_handle_t channel,
-				     const void *rd, size_t /* unused */,
+				     const void *data, size_t n,
 				     rmt_encode_state_t *state)
 {
 	struct encoder_context *ctx = encoder_context_of(container);
 	rmt_encoder_t *cpenc = ctx->copy_encoder;
 	rmt_encoder_t *btenc = ctx->byte_encoder;
-	const struct frame_info *frame = rd;
+	const struct frame_info *frame = data;
 	size_t symlen = 0;
 
 	switch (ctx->state) {
@@ -275,10 +276,8 @@ int make_aeha_encoder(rmt_encoder_handle_t *encoder)
 
 err_init_bt_enc:
 	rmt_del_encoder(ctx->copy_encoder);
-
 err_init_cp_enc:
 	free(ctx);
-
 err_make_enc_ctx:
 	return res;
 }

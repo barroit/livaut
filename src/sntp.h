@@ -20,13 +20,20 @@
 **
 ****************************************************************************/
 
-#ifndef WIFI_H
-#define WIFI_H
+#ifndef SNTP_H
+#define SNTP_H
 
-void setup_wifi_task(void *);
+#include "types.h"
 
-int is_wifi_connected(void);
+int setup_sntp_service(void);
 
-const char *get_router_address(void);
+int start_sntp_service(void);
 
-#endif /* WIFI_H */
+/* do not call this function in task */
+void collaborate_timezone(void);
+
+u64 get_seconds_of_day(void);
+
+int is_sntp_started(void);
+
+#endif /* SNTP_H */

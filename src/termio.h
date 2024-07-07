@@ -55,4 +55,6 @@ void print_checksum(const u8 *bitmap, size_t n);
 
 void print_task_avail_stack(const char *tag, void *tsk);
 
+#define HH_MM_SS "%02" PRIu64 ":%02" PRIu64 ":%02" PRIu64
+
 #endif /* TERMIO_H */

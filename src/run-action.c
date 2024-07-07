@@ -29,7 +29,9 @@
 #include "freertos/task.h"
 #include "termio.h"
 
-static const struct action *find_action(const struct action *acts)
+#define TAG "action_exec"
+
+static const struct action_info *find_action(const struct action_info *acts)
 {
 	for_each_elem(acts, handle) {
 		if (is_jumper_set(J1(acts->jumper), J2(acts->jumper)))
@@ -39,8 +41,8 @@ static const struct action *find_action(const struct action *acts)
 	return NULL;
 }
 
-static enum action_state next_state(const struct action *acts,
-				    const struct action *act,
+static enum action_state next_state(const struct action_info *acts,
+				    const struct action_info *act,
 				    struct action_config *conf,
 				    enum action_state state)
 {
@@ -90,11 +92,13 @@ static void exec_state(enum action_state state, u8 *sign)
 	}
 }
 
-void TASK run_action(void *actions)
+void run_action(const struct action_info *actions)
 {
+	info(TAG, "start action executor");
+
 	u8 sign = SN_1 | SN_3 | SN_5 | SN_7;
 	enum action_state state = ACTION_INIT;
-	const struct action *acts = actions, *act = NULL;
+	const struct action_info *action = NULL;
 	struct action_config conf;
 	const struct action_config conf0 = {
 		.delay = 1000,
@@ -103,17 +107,17 @@ void TASK run_action(void *actions)
 	while (39) {
 		if (state == ACTION_INIT) {
 			show_spinner(&sign);
-			act = find_action(acts);
-			if (act)
+			action = find_action(actions);
+			if (action)
 				conf = conf0;
-		} else if (find_action(acts) != act) {
+		} else if (find_action(actions) != action) {
 			state = ACTION_CLEN;
 		} else if (state == ACTION_DONE) {
 			show_spinner(&sign);
 			state = ACTION_AGIN;
 		}
 
-		state = next_state(acts, act, &conf, state);
+		state = next_state(actions, action, &conf, state);
 		exec_state(state, &sign);
 
 		if (state == ACTION_DONE || state == ACTION_INIT)
@@ -121,4 +125,10 @@ void TASK run_action(void *actions)
 		else if (conf.delay)
 			vTaskDelay(pdMS_TO_TICKS(conf.delay));
 	}
+}
+
+void exec_action_task(void *actions)
+{
+	run_action(actions);
+	vTaskDelete(NULL);
 }

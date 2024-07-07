@@ -49,4 +49,8 @@ static inline size_t st_mult(size_t a, size_t b)
 
 #define pin_bit_mask(p) (1ULL << (p))
 
+#define sec_to_hour_d(s) (s / 3600)
+#define sec_to_min_d(s)  ((s % 3600) / 60)
+#define sec_to_sec_d(s)  ((s % 3600) % 60)
+
 #endif /* CALC_H */

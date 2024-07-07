@@ -48,7 +48,7 @@ typedef enum action_state (*action_handle_t)(void);
 typedef int (*action_setup_t)(struct action_config *);
 typedef int (*action_teardown_t)(void);
 
-struct action {
+struct action_info {
 	const char *name;
 	action_handle_t handle;
 	action_setup_t setup;
@@ -59,7 +59,7 @@ struct action {
 #define J1(j) (j >> 8)
 #define J2(j) (j & 0x00FF)
 
-void run_action(void *acts);
+void exec_action_task(void *actions);
 
 #define DEFINE_ACTION_SIGNATURE(n)		\
 	enum action_state n(void);		\

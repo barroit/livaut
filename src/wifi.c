@@ -21,6 +21,7 @@ static size_t retry_count;
 static int is_disconnect_call;
 
 static int is_wifi_init_done;
+static char router_address[16];
 
 #define TAG "wifi_init"
 
@@ -44,12 +45,15 @@ static void handle_wifi_event(void *, esp_event_base_t, int32_t id, void *)
 	}
 }
 
-static void handle_ip_event(void *, esp_event_base_t, int32_t id, void *)
+static void handle_ip_event(void *, esp_event_base_t, int32_t id, void *ctx)
 {
 	switch (id) {
 	case IP_EVENT_STA_GOT_IP:
 		retry_count = 0;
 		xEventGroupSetBits(wifi_state, START_SUCCESS);
+
+		ip_event_got_ip_t *data = ctx;
+		snprintf(router_address, 16, IPSTR, IP2STR(&data->ip_info.gw));
 	}
 }
 
@@ -183,13 +187,25 @@ err_netif_init:
 	return 1;
 }
 
+typedef void (*setup_wifi_task_cb)(int err);
+
+void setup_wifi_task(void *cb)
+{
+	int err;
+
+	err = setup_wifi();
+
+	((setup_wifi_task_cb)cb)(err);
+
+	vTaskDelete(NULL);
+}
+
 int is_wifi_connected(void)
 {
 	return is_wifi_init_done;
 }
 
-void setup_wifi_task(void *)
+const char *get_router_address(void)
 {
-	setup_wifi();
-	vTaskDelete(NULL);
+	return router_address;
 }

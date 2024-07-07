@@ -25,15 +25,22 @@
 #include "rmt.h"
 #include "termio.h"
 #include "signal-schedule.h"
+#include "sntp.h"
+#include "list.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "calc.h"
 
 #define RS ESP_ERROR_CHECK
 
 #define SYMBOL_BUFFER_SIZE   RMT_MBLK_SZ
 #define TRANSFER_QUEUE_DEPTH 3
 
+#define TAG "auto_control"
+
 static rmt_channel_handle_t tx_channel;
 static rmt_encoder_handle_t encoder;
-static u8 next_schedule; 
+static u8 next_schedule;
 
 static int install_tx_channel(void)
 {
@@ -79,19 +86,63 @@ int auto_control_setup(struct action_config *)
 int auto_control_teardown(void)
 {
 	RS(rmt_disable(tx_channel));
+
 	RS(rmt_del_channel(tx_channel));
+
 	RS(encoder->del(encoder));
 
 	return 0;
 }
 
-static void transmit_signal(frame_info_t *frame)
+void transmit_signal(frame_info_t *frame, size_t fnum)
 {
 	rmt_transmit_config_t conf = { 0 };
-	RS(rmt_transmit(tx_channel, encoder, frame, ~0, &conf));
+	RS(rmt_transmit(tx_channel, encoder, frame, fnum, &conf));
+}
+
+static int is_auto_controllable(void)
+{
+	static size_t count;
+
+	if (!is_sntp_started()) {
+		if (count++ % 5 == 0)
+			warning(TAG, "sntp service is not running");
+		return 0;
+	}
+
+	count = 0;
+	return 1;
+}
+
+static void goto_next_schedule(void)
+{
+	if (next_schedule + 1 == sizeof(schedules))
+		next_schedule = 0;
+	else
+		next_schedule++;
 }
 
 enum action_state auto_control(void)
 {
+	const struct signal_schedule *schedule = &schedules[next_schedule];
+	u64 ts = schedule->start, now = get_seconds_of_day();
+
+	if (!is_auto_controllable() || schedule->start > now) {
+		return ACTION_AGIN;
+	} else if (schedule->start < now - 5) {
+		goto_next_schedule();
+		info(TAG, "skipped a schedule set for " HH_MM_SS,
+		     sec_to_hour_d(ts), sec_to_min_d(ts), sec_to_sec_d(ts));
+		return ACTION_RETY;
+	}
+
+	transmit_signal(schedule->frame, schedule->fnum);
+
+	goto_next_schedule();
+
+	ts = schedules[next_schedule].start;
+	info(TAG, "next schedule is set to run at " HH_MM_SS,
+	     sec_to_hour_d(ts), sec_to_min_d(ts), sec_to_sec_d(ts));
+
 	return ACTION_DONE;
 }

@@ -22,8 +22,11 @@
 
 #include "nvs.h"
 #include "nvs_flash.h"
+#include "termio.h"
 
 #define RS ESP_ERROR_CHECK
+
+#define TAG "nvs_flash"
 
 int init_nvs_flash(void)
 {
@@ -36,5 +39,14 @@ int init_nvs_flash(void)
 		err = nvs_flash_init();
 	}
 
+	info(TAG, "initialized");
+
 	return ESP_ERROR_CHECK_WITHOUT_ABORT(err);
+}
+
+void release_nvs_flash(void)
+{
+	nvs_flash_deinit();
+
+	info(TAG, "released");
 }
