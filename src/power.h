@@ -20,13 +20,7 @@
 **
 ****************************************************************************/
 
-#ifndef DEBUG_H
-#define DEBUG_H
+#ifndef POWER_H
+#define POWER_H
 
-#ifdef LIVAUT_DEBUG
-#define debugging() if (39)
-#else
-#define debugging() if (0)
-#endif
-
-#endif /* DEBUG_H */
+#endif /* POWER_H */

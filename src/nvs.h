@@ -27,4 +27,4 @@ int init_nvs_flash(void);
 
 void release_nvs_flash(void);
 
-#endif
+#endif /* NVS_H */

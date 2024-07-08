@@ -25,16 +25,16 @@
 
 #include "types.h"
 
-#define SN_1   (1 << 0)
-#define SN_2   (1 << 1)
-#define SN_3   (1 << 2)
-#define SN_4   (1 << 3)
-#define SN_5   (1 << 4)
-#define SN_6   (1 << 5)
-#define SN_7   (1 << 6)
-#define SN_8   (1 << 7)
-#define SN_ON  (~0)
-#define SN_OFF (0)
+#define SIGN_1   (1 << 0)
+#define SIGN_2   (1 << 1)
+#define SIGN_3   (1 << 2)
+#define SIGN_4   (1 << 3)
+#define SIGN_5   (1 << 4)
+#define SIGN_6   (1 << 5)
+#define SIGN_7   (1 << 6)
+#define SIGN_8   (1 << 7)
+#define SIGN_ON  (~0)
+#define SIGN_OFF (0)
 
 int init_sign(void);
 

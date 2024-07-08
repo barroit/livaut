@@ -20,13 +20,4 @@
 **
 ****************************************************************************/
 
-#ifndef DEBUG_H
-#define DEBUG_H
-
-#ifdef LIVAUT_DEBUG
-#define debugging() if (39)
-#else
-#define debugging() if (0)
-#endif
-
-#endif /* DEBUG_H */
+#include "power.h"

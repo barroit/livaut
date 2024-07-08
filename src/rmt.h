@@ -29,4 +29,4 @@
 #define RMT_CLK_SRC RMT_CLK_SRC_DEFAULT
 #define RMT_MBLK_SZ 256                 /* memory block size */
 
-#endif
+#endif /* RMT_H */

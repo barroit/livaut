@@ -77,7 +77,7 @@ static void exec_state(enum action_state state, u8 *sign)
 {
 	switch (state) {
 	case ACTION_DONE:
-		show_sign(SN_ON);
+		show_sign(SIGN_ON);
 		break;
 	case ACTION_AGIN:
 		show_spinner(sign);
@@ -87,7 +87,7 @@ static void exec_state(enum action_state state, u8 *sign)
 	case ACTION_CLEN:
 		break;
 	case ACTION_ERRO:
-		show_sign(SN_OFF);
+		show_sign(SIGN_OFF);
 		vTaskDelete(NULL);
 	}
 }
@@ -96,7 +96,7 @@ void run_action(const struct action_info *actions)
 {
 	info(TAG, "start action executor");
 
-	u8 sign = SN_1 | SN_3 | SN_5 | SN_7;
+	u8 sign = SIGN_1 | SIGN_3 | SIGN_5 | SIGN_7;
 	enum action_state state = ACTION_INIT;
 	const struct action_info *action = NULL;
 	struct action_config conf;

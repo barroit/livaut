@@ -188,7 +188,7 @@ static void handle_decoded_signals(u8 *bitmap, size_t n)
 		free(bitmap);
 	}
 
-	show_sign(SN_ON);
+	show_sign(SIGN_ON);
 }
 
 enum action_state receive_signal(void)
