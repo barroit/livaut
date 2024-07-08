@@ -44,4 +44,6 @@ void make_aeha_receiver_config(rmt_receive_config_t *conf);
 
 int make_aeha_encoder(rmt_encoder_handle_t *encoder);
 
+int convert_aeha_lldat(u32 *space, size_t n);
+
 #endif /* AEHA_PROTOCOL_H */

@@ -68,7 +68,7 @@ static u8 get_aeha_bit(u16 d1, u16 d2)
 	return ~0;
 }
 
-static enum decoder_state decode_aeha_symbols_step(const rmt_symbol_word_t *s,
+static enum decoder_state do_aeha_symbols_decoding(const rmt_symbol_word_t *s,
 						   size_t n, u8 *out)
 {
 	size_t i;
@@ -86,26 +86,42 @@ static enum decoder_state decode_aeha_symbols_step(const rmt_symbol_word_t *s,
 	return DEC_DONE;
 }
 
-enum decoder_state decode_aeha_symbols(rmt_symbol_word_t *s, size_t n,
-				       u8 **out, size_t *sz)
+static void report_non_aeha_symbol(rmt_symbol_word_t *s, size_t n)
 {
-	if (!is_aeha_symbols(s, n))
-		return DEC_SKIP;
+	puts("found non aeha symbols");
+	size_t i;
+	for_each_idx(i, n)
+		printf("{ %u:%u, %u:%u }\n", s[i].level0, s[i].duration0,
+		       s[i].level1, s[i].duration1);
+	putchar('\n');
+}
 
-	/* skip leader */
-	s++;
-	n--;
+enum decoder_state decode_aeha_symbols(rmt_symbol_word_t *s, size_t n,
+				       u8 **buf, size_t *num)
+{
+	if (!is_aeha_leader(s)) {
+		if (n > 2) {
+			*buf = NULL;
+			*num = 0;
+			report_non_aeha_symbol(s, n);
+			return DEC_DONE;
+		}
+
+		return DEC_SKIP;
+	} else {
+		s++;
+		n--;
+	}
 
 	if (s[n - 1].duration1 == 0)
 		n--;
 
-	if (n % 4 != 0)
+	if (n % 4 != 0 || n == 0)
 		return DEC_SKIP;
 
-	*sz = n;
-	*out = xmalloc_b32(n);
-
-	return decode_aeha_symbols_step(s, n, *out);
+	*num = n;
+	*buf = xmalloc_b32(n);
+	return do_aeha_symbols_decoding(s, n, *buf);
 }
 
 void make_aeha_receiver_config(rmt_receive_config_t *conf)
@@ -117,6 +133,7 @@ void make_aeha_receiver_config(rmt_receive_config_t *conf)
 }
 
 enum encoder_state {
+	ENCODE_DELAY,
 	ENCODE_LEADER,
 	ENCODE_CUSTOMER,
 	ENCODE_DATA,
@@ -130,7 +147,7 @@ struct encoder_context {
 	rmt_symbol_word_t leading_symbol;
 	rmt_symbol_word_t tailing_symbol;
 	enum encoder_state state;
-	size_t pending;
+	const struct frame_info *next_frame;
 };
 
 #define encoder_context_of(c) \
@@ -145,21 +162,55 @@ struct encoder_context {
 
 static size_t IRAM_ATTR encode_frame(rmt_encoder_t *container,
 				     rmt_channel_handle_t channel,
-				     const void *data, size_t n,
+				     const void *rdat, size_t,
 				     rmt_encode_state_t *state)
 {
 	struct encoder_context *ctx = encoder_context_of(container);
 	rmt_encoder_t *cpenc = ctx->copy_encoder;
 	rmt_encoder_t *btenc = ctx->byte_encoder;
-	const struct frame_info *frame = data;
+	const struct frame_info *frame = rdat;
 	size_t symlen = 0;
 
+	if (!frame->delay) {
+		ctx->state++;
+	}
+
 	switch (ctx->state) {
-	case ENCODE_LEADER:
-		symlen += cpenc->encode(cpenc, channel, &ctx->leading_symbol,
+	case ENCODE_DELAY:
+		rmt_symbol_word_t delay = { 0 };
+		u64 maxdur = (1U << ((sizeof(delay) * 8 / 2) - 1)) - 1;
+		u16 avail = maxdur / 1000;
+
+		if (frame->delay > avail) {
+			delay.duration0 = avail * 1000;
+			delay.duration1 = (frame->delay - avail) * 1000;
+		} else {
+			delay.duration0 = frame->delay * 1000 - 1000;
+			delay.duration1 = 1000;
+		}
+
+		symlen += cpenc->encode(cpenc, channel, &delay,
 					sizeof(rmt_symbol_word_t), state);
 		if (handle_encode_result_normal(*state, ctx))
 			break;
+		/* FALLTHRU */
+	case ENCODE_LEADER:
+		const void *dat;
+		size_t n = sizeof(rmt_symbol_word_t);
+
+		if (frame->bnum) {
+			dat = frame->lldat;
+			n *= frame->bnum;
+		} else {
+			dat = &ctx->leading_symbol;
+		}
+
+		symlen += cpenc->encode(cpenc, channel, dat, n, state);
+		if (handle_encode_result_normal(*state, ctx))
+			break;
+
+		if (frame->bnum)
+			goto encode_tailer;
 		/* FALLTHRU */
 	case ENCODE_CUSTOMER:
 		/**
@@ -179,6 +230,7 @@ static size_t IRAM_ATTR encode_frame(rmt_encoder_t *container,
 			break;
 		/* FALLTHRU */
 	case ENCODE_TAILER:
+encode_tailer:
 		symlen += cpenc->encode(cpenc, channel, &ctx->tailing_symbol,
 					sizeof(rmt_symbol_word_t), state);
 		if (*state & RMT_ENCODING_COMPLETE)
@@ -280,4 +332,23 @@ err_init_cp_enc:
 	free(ctx);
 err_make_enc_ctx:
 	return res;
+}
+
+int convert_aeha_lldat(u32 *space, size_t n)
+{
+	size_t i;
+	u8 bit;
+	rmt_symbol_word_t *dat = (rmt_symbol_word_t *)space;
+	for_each_idx(i, n) {
+		bit = space[i];
+		if (bit != 0 && bit != 1)
+			return 1;
+
+		dat[i].level0 = 1;
+		dat[i].duration0 = AEHA_T(1);
+		dat[i].level1 = 0;
+		dat[i].duration1 = AEHA_T(bit ? 3 : 1);
+	}
+
+	return 0;
 }

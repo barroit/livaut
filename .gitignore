@@ -1,4 +1,5 @@
 build/
 sdkconfig.old
+sdkconfig
 tmp/
 wifi.conf

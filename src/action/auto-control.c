@@ -36,7 +36,7 @@
 #define SYMBOL_BUFFER_SIZE   RMT_MBLK_SZ
 #define TRANSFER_QUEUE_DEPTH 3
 
-#define TAG "auto_control"
+#define TAG "signal_schedule"
 
 static rmt_channel_handle_t tx_channel;
 static rmt_encoder_handle_t encoder;
@@ -94,10 +94,15 @@ int auto_control_teardown(void)
 	return 0;
 }
 
-void transmit_signal(frame_info_t *frame, size_t fnum)
+void transmit_signal(frame_info_t *frame)
 {
 	rmt_transmit_config_t conf = { 0 };
-	RS(rmt_transmit(tx_channel, encoder, frame, fnum, &conf));
+	if (frame->bnum) {
+		if (convert_aeha_lldat(frame->lldat, frame->bnum))
+			die(TAG, "invalid lldat found");
+	}
+
+	RS(rmt_transmit(tx_channel, encoder, frame, ~0, &conf));
 }
 
 static int is_auto_controllable(void)
@@ -136,7 +141,9 @@ enum action_state auto_control(void)
 		return ACTION_RETY;
 	}
 
-	transmit_signal(schedule->frame, schedule->fnum);
+	size_t i;
+	for_each_idx(i, schedule->fnum)
+		transmit_signal(schedule->frame);
 
 	goto_next_schedule();
 

@@ -180,11 +180,14 @@ static void handle_decoded_signals(u8 *bitmap, size_t n)
 	if (is_interval_set[!next_inter_idx])
 		log_frame_interval();
 
-	print_frame_dump(bitmap, n);
-	putchar('\n');
+	if (n != 0) {
+		print_frame_dump(bitmap, n);
+		putchar('\n');
 
-	fflush(stdout);
-	free(bitmap);
+		fflush(stdout);
+		free(bitmap);
+	}
+
 	show_sign(SN_ON);
 }
 
@@ -214,8 +217,8 @@ enum action_state receive_signal(void)
 	case DEC_DONE:
 		handle_decoded_signals(signals, sigsz);
 		/**
-		 * since some remote controllers send frames twice, we need
-		 * to ensure the second frame is processed by decoder, so
+		 * since some remote controllers send frame multiple times, we
+		 * need to ensure the next frame is processed by decoder, so
 		 * return ACTION_RETY to avoid frame loss
 		 */
 		return ACTION_RETY;
