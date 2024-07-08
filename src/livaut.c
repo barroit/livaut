@@ -41,78 +41,32 @@ static const struct action_info actions[] = {
 	ACTION_TAIL(),
 };
 
-void setup_wifi_task_callback(int err)
+void at_sta2ap_connect(int err)
 {
 	if (err) {
 		release_nvs_flash();
 		return;
 	}
 
-	err = setup_sntp_service();
-	if (!err)
-		start_sntp_service();
-}
+	config_sntp_service();
 
-#include "list.h"
-#include "signal-schedule-def.h"
-#include "driver/rmt_tx.h"
-
-// static const struct signal_schedule *schedule = &(struct signal_schedule){
-// 	.start = 34200,
-// 	.frame = (struct frame_info[]){
-// 			{
-// 				.delay = 0,
-// 				.lldat = 0,
-// 				.bnum  = 0,
-// 				.cnum  = 4,
-// 				.data  = (uint8_t[]){ 0x11, 0xDA, 0x27, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x80, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x97 },
-// 				.unum  = 16,
-// 			},
-// 			{
-// 				.delay = 35,
-// 				.lldat = 0,
-// 				.bnum  = 0,
-// 				.cnum  = 4,
-// 				.data  = (uint8_t[]){ 0x11, 0xDA, 0x27, 0x00, 0x00, 0x38, 0x34, 0x00, 0xAF, 0x00, 0x00, 0x06, 0x60, 0x00, 0x00, 0xC3, 0x00, 0x00, 0x56 },
-// 				.unum  = 15,
-// 			},
-// 	},
-// 	.fnum  = 2,
-// };
-
-void transmit_signal(frame_info_t *frame);
-
-void test(void *)
-{
-	// struct action_config conf = { 0 };
-	// receive_signal_setup(&conf);
-
-	// auto_control_setup(NULL);
-
-	// size_t i;
-	// for_each_idx(i, schedule->fnum) {
-	// 	transmit_signal(&schedule->frame[i]);
-	// }
-
-	// while (39)
-		// receive_signal();
+	start_sntp_service();
 }
 
 void app_main(void)
 {
-	// xTaskCreate(test, "test", 4096, NULL, 15, NULL);
 	int err;
 
-// 	err = init_nvs_flash();
-// 	if (err)
-// 		goto setup_jumper;
+	err = init_nvs_flash();
+	if (err)
+		goto setup_jumper;
 
-// 	collaborate_timezone();
+	collaborate_timezone();
 
-// 	xTaskCreate(setup_wifi_task, "wifi_init", 2048,
-// 		    setup_wifi_task_callback, 10, NULL);
+	xTaskCreate(make_sta2ap_connection, "wifi_init", 2048,
+		    at_sta2ap_connect, 10, NULL);
 
-// setup_jumper:
+setup_jumper:
 	config_jumper();
 
 	err = install_mst_bus();

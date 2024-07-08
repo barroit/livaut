@@ -25,7 +25,7 @@
 
 #include "types.h"
 
-int setup_sntp_service(void);
+void config_sntp_service(void);
 
 int start_sntp_service(void);
 

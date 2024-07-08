@@ -25,6 +25,7 @@
 #include "esp_netif_sntp.h"
 #include "termio.h"
 #include "time.h"
+#include <assert.h>
 
 #define TAG "sntp_service"
 
@@ -33,16 +34,12 @@
 
 static int is_service_started;
 
-int setup_sntp_service(void)
-{
-	if (!is_wifi_connected())
-		return 1;
-
+void config_sntp_service(void)
+{ 
 	esp_sntp_config_t conf = ESP_NETIF_SNTP_DEFAULT_CONFIG(NTP_SERVER);
 	conf.start = false;
 
 	esp_netif_sntp_init(&conf);
-	return 0;
 }
 
 int start_sntp_service(void)

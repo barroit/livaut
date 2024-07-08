@@ -23,10 +23,12 @@
 #ifndef WIFI_H
 #define WIFI_H
 
-void setup_wifi_task(void *);
+void make_sta2ap_connection(void *);
 
-int is_wifi_connected(void);
+int is_sta2ap_connected(void);
 
-const char *get_router_address(void);
+void disconnect_sta2ap(void);
+
+int connect_sta2ap(void);
 
 #endif /* WIFI_H */

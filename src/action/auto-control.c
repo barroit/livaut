@@ -80,6 +80,8 @@ int auto_control_setup(struct action_config *)
 
 	RS(make_aeha_encoder(&encoder));
 
+	info(TAG, "setup()");
+
 	return 0;
 }
 
@@ -90,6 +92,8 @@ int auto_control_teardown(void)
 	RS(rmt_del_channel(tx_channel));
 
 	RS(encoder->del(encoder));
+
+	info(TAG, "teardown()");
 
 	return 0;
 }

@@ -9,10 +9,11 @@
 
 #define MAXIMUM_RETRY 5
 
-#define START_FAILURE BIT1
-#define START_SUCCESS BIT0
+#define STA2AP_START_FAILURE BIT1
+#define STA2AP_START_SUCCESS BIT0
+#define STA2AP_STATES        (STA2AP_START_FAILURE | STA2AP_START_SUCCESS)
 
-static EventGroupHandle_t wifi_state;
+static EventGroupHandle_t sta2ap_state;
 static esp_netif_t *netif;
 static esp_event_handler_instance_t wifi_event_handle;
 static esp_event_handler_instance_t ip_event_handle;
@@ -20,7 +21,8 @@ static esp_event_handler_instance_t ip_event_handle;
 static size_t retry_count;
 static int is_disconnect_call;
 
-static int is_wifi_init_done;
+static int is_communicating;
+static int is_sta2ap_inited;
 static char router_address[16];
 
 #define TAG "wifi_init"
@@ -32,15 +34,18 @@ static void handle_wifi_event(void *, esp_event_base_t, int32_t id, void *)
 		esp_wifi_connect();
 		break;
 	case WIFI_EVENT_STA_DISCONNECTED:
-		if (is_disconnect_call)
+		if (is_disconnect_call) {
+			is_disconnect_call = 0;
 			break;
+		}
+
 		if (retry_count++ < MAXIMUM_RETRY) {
 			if (retry_count % 2)
 				info(TAG, "trying to connect to ‘%s’",
 				     WIFI_SSID);
 			esp_wifi_connect();
 		} else {
-			xEventGroupSetBits(wifi_state, START_FAILURE);
+			xEventGroupSetBits(sta2ap_state, STA2AP_START_FAILURE);
 		}
 	}
 }
@@ -50,7 +55,7 @@ static void handle_ip_event(void *, esp_event_base_t, int32_t id, void *ctx)
 	switch (id) {
 	case IP_EVENT_STA_GOT_IP:
 		retry_count = 0;
-		xEventGroupSetBits(wifi_state, START_SUCCESS);
+		xEventGroupSetBits(sta2ap_state, STA2AP_START_SUCCESS);
 
 		ip_event_got_ip_t *data = ctx;
 		snprintf(router_address, 16, IPSTR, IP2STR(&data->ip_info.gw));
@@ -95,7 +100,7 @@ static void reset_event_handle(void)
 	EEHIU(IP_EVENT, IP_EVENT_STA_GOT_IP, ip_event_handle);
 }
 
-static int setup_wifi_config(void)
+static int setup_sta_config(void)
 {
 	int err;
 
@@ -124,9 +129,11 @@ static int setup_wifi_config(void)
 	return 0;
 }
 
-static int setup_wifi(void)
+static int init_sta(void)
 {
 	int err;
+
+	sta2ap_state = xEventGroupCreate();
 
 	/*
 	 * when ‘E (15181) wifi:NAN WiFi stop’ gets fixed, we
@@ -135,8 +142,6 @@ static int setup_wifi(void)
 	esp_log_level_set("wifi", ESP_LOG_NONE);
 
 	print_task_avail_stack("wifi_init", NULL);
-
-	wifi_state = xEventGroupCreate();
 
 	err = CE(esp_netif_init());
 	if (err)
@@ -151,32 +156,13 @@ static int setup_wifi(void)
 	if (err)
 		goto err_wifi_init;
 
-	err = setup_wifi_config();
+	err = setup_sta_config();
 	if(err)
 		goto err_wifi_set_conf;
 
-	err = CE(esp_wifi_start());
-	if (err)
-		goto err_wifi_start;
-
-	EventBits_t bit = xEventGroupWaitBits(wifi_state,
-					      START_FAILURE | START_SUCCESS,
-					      pdFALSE, pdFALSE,
-					      portMAX_DELAY);
-	if (bit != START_SUCCESS) {
-		warning(TAG, "unable to connect to ‘%s’", WIFI_SSID);
-		goto err_wifi_connect;
-	}
-
-	is_wifi_init_done = 1;
+	is_sta2ap_inited = 1;
 	return 0;
 
-err_wifi_connect:
-	esp_wifi_disconnect();
-	esp_wifi_stop();
-	is_disconnect_call = 1;
-err_wifi_start:
-	/* no need to clean up config file */
 err_wifi_set_conf:
 	esp_wifi_deinit();
 err_wifi_init:
@@ -187,25 +173,61 @@ err_netif_init:
 	return 1;
 }
 
-typedef void (*setup_wifi_task_cb)(int err);
+int is_sta2ap_connected(void)
+{
+	return is_communicating;
+}
 
-void setup_wifi_task(void *cb)
+void disconnect_sta2ap(void)
+{
+	esp_wifi_disconnect();
+	esp_wifi_stop();
+	is_disconnect_call = 1;
+	is_communicating = 0;
+}
+
+int connect_sta2ap(void)
 {
 	int err;
 
-	err = setup_wifi();
+	err = CE(esp_wifi_start());
+	if (err)
+		goto err_wifi_start;
 
+	EventBits_t bit = xEventGroupWaitBits(sta2ap_state, STA2AP_STATES,
+					      pdFALSE, pdFALSE, portMAX_DELAY);
+	xEventGroupClearBits(sta2ap_state, STA2AP_STATES);
+
+	if (bit != STA2AP_START_SUCCESS) {
+		warning(TAG, "unable to connect to ‘%s’", WIFI_SSID);
+		goto err_wifi_connect;
+	}
+
+	is_communicating = 1;
+	return 0;
+
+err_wifi_start:
+	disconnect_sta2ap();
+err_wifi_connect:
+	return 1;
+}
+
+typedef void (*setup_wifi_task_cb)(int err);
+
+void make_sta2ap_connection(void *cb)
+{
+	int err;
+
+	err = init_sta();
+	if (err)
+		goto atconnect;
+
+	err = connect_sta2ap();
+	if (err)
+		goto atconnect;
+
+atconnect:
 	((setup_wifi_task_cb)cb)(err);
 
 	vTaskDelete(NULL);
-}
-
-int is_wifi_connected(void)
-{
-	return is_wifi_init_done;
-}
-
-const char *get_router_address(void)
-{
-	return router_address;
 }

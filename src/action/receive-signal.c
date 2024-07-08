@@ -53,6 +53,8 @@ static u8 next_inter_idx;
 
 #define INTERVAL_TOLERANCE 8270
 
+#define TAG "receive_signal"
+
 static bool IRAM_ATTR copy_received_frame(rmt_channel_handle_t /* channel */,
 					  const rmt_rx_done_event_data_t *syms,
 					  void *ctx)
@@ -131,7 +133,7 @@ int receive_signal_setup(struct action_config *conf)
 	RS(rmt_receive(rx_channel, rmt_symbols,
 		       sizeof(rmt_symbols), &rmt_config));
 
-	info("receive_signal_setup()", "ok");
+	info(TAG, "setup()");
 	return 0;
 }
 
@@ -153,7 +155,7 @@ int receive_signal_teardown(void)
 
 	vQueueDelete(incoming_symbols);
 
-	info("receive_signal_teardown()", "ok");
+	info(TAG, "teardown()");
 	return 0;
 }
 
