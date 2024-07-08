@@ -100,11 +100,14 @@ int auto_control_teardown(void)
 
 void transmit_signal(frame_info_t *frame)
 {
+	int err = 0;
 	rmt_transmit_config_t conf = { 0 };
-	if (frame->bnum) {
-		if (convert_aeha_lldat(frame->lldat, frame->bnum))
-			die(TAG, "invalid lldat found");
-	}
+
+	if (frame->bnum && !is_lldat_converted(frame->lldat))
+		err = convert_aeha_lldat(frame->lldat, frame->bnum);
+
+	if (err)
+		die(TAG, "invalid lldat found");
 
 	RS(rmt_transmit(tx_channel, encoder, frame, ~0, &conf));
 }

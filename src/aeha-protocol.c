@@ -44,11 +44,6 @@ static inline int is_aeha_leader(const rmt_symbol_word_t *sym)
 		in_aeha_range(sym->duration1, 4);
 }
 
-static inline int is_aeha_symbols(const rmt_symbol_word_t *syms, size_t n)
-{
-	return n > 1 && is_aeha_leader(syms);
-}
-
 static u8 get_aeha_bit(u16 d1, u16 d2)
 {
 	u16 derr;
@@ -336,9 +331,10 @@ err_make_enc_ctx:
 
 int convert_aeha_lldat(u32 *space, size_t n)
 {
+	rmt_symbol_word_t *dat = (rmt_symbol_word_t *)space;
 	size_t i;
 	u8 bit;
-	rmt_symbol_word_t *dat = (rmt_symbol_word_t *)space;
+
 	for_each_idx(i, n) {
 		bit = space[i];
 		if (bit != 0 && bit != 1)
@@ -351,4 +347,12 @@ int convert_aeha_lldat(u32 *space, size_t n)
 	}
 
 	return 0;
+}
+
+int is_lldat_converted(u32 *space)
+{
+	rmt_symbol_word_t s = (rmt_symbol_word_t)*space;
+	return s.level0 == 1 && s.level1 == 0 &&
+	       s.duration0 == AEHA_T(1) &&
+	       (s.duration1 == AEHA_T(1) || s.duration1 == AEHA_T(3));
 }

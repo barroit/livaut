@@ -46,4 +46,6 @@ int make_aeha_encoder(rmt_encoder_handle_t *encoder);
 
 int convert_aeha_lldat(u32 *space, size_t n);
 
+int is_lldat_converted(u32 *space);
+
 #endif /* AEHA_PROTOCOL_H */
