@@ -72,7 +72,7 @@ static enum decoder_state do_aeha_symbols_decoding(const rmt_symbol_word_t *s,
 	for_each_idx(i, n) {
 		bit = get_aeha_bit(s[i].duration0, s[i].duration1);
 		if (bit == (u8)~0)
-			return DEC_ERRO;
+			return DEC_ERROR;
 
 		*out = bit;
 		out++;

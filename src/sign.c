@@ -20,6 +20,7 @@
 **
 ****************************************************************************/
 
+#include "sign.h"
 #include "bus.h"
 #include "termio.h"
 #include "driver/i2c_master.h"

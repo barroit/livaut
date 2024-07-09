@@ -20,7 +20,7 @@
 **
 ****************************************************************************/
 
-#include "run-action.h"
+#include "execute-action.h"
 #include "aeha-protocol.h"
 #include "rmt.h"
 #include "termio.h"
@@ -31,10 +31,10 @@
 #include "freertos/task.h"
 #include "calc.h"
 
-#define RS ESP_ERROR_CHECK
+#define CE ESP_ERROR_CHECK_WITHOUT_ABORT
 
 #define SYMBOL_BUFFER_SIZE   RMT_MBLK_SZ
-#define TRANSFER_QUEUE_DEPTH 3
+#define TRANSFER_QUEUE_DEPTH 4
 
 #define TAG "signal_schedule"
 
@@ -42,7 +42,7 @@ static rmt_channel_handle_t tx_channel;
 static rmt_encoder_handle_t encoder;
 static u8 next_schedule;
 
-static int install_tx_channel(void)
+static rmt_tx_channel_config_t get_chan_conf(void)
 {
 	rmt_tx_channel_config_t conf = {
 		.clk_src           = RMT_CLK_SRC,
@@ -52,10 +52,10 @@ static int install_tx_channel(void)
 		.trans_queue_depth = TRANSFER_QUEUE_DEPTH,
 	};
 
-	return rmt_new_tx_channel(&conf, &tx_channel);
+	return conf;
 }
 
-static int configure_tx_carrier(void)
+static rmt_carrier_config_t get_carr_conf(void)
 {
 	FIELD_TYPEOF(rmt_carrier_config_t, flags) flag = {
 		.polarity_active_low = false,
@@ -67,38 +67,56 @@ static int configure_tx_carrier(void)
 		.flags        = flag,
 	};
 
-	return rmt_apply_carrier(tx_channel, &conf);
+	return conf;
 }
 
-int auto_control_setup(struct action_config *)
+int schedule_signal_setup(void)
 {
-	RS(install_tx_channel());
+	int err;
 
-	RS(configure_tx_carrier());
+	rmt_tx_channel_config_t chan_conf = get_chan_conf();
+	err = CE(rmt_new_tx_channel(&chan_conf, &tx_channel));
+	if (err)
+		return 1;
 
-	RS(rmt_enable(tx_channel));
+	rmt_carrier_config_t carr_conf = get_carr_conf();
+	err = CE(rmt_apply_carrier(tx_channel, &carr_conf));
+	if (err)
+		return 1;
 
-	RS(make_aeha_encoder(&encoder));
+	err = CE(rmt_enable(tx_channel));
+	if (err)
+		return 1;
 
-	info(TAG, "setup()");
+	err = CE(make_aeha_encoder(&encoder));
+	if (err)
+		return 1;
 
 	return 0;
 }
 
-int auto_control_teardown(void)
+int schedule_signal_teardown(void)
 {
-	RS(rmt_disable(tx_channel));
+	int err;
 
-	RS(rmt_del_channel(tx_channel));
+	err = CE(rmt_disable(tx_channel));
+	if (err)
+		return 1;
 
-	RS(encoder->del(encoder));
+	err = CE(rmt_del_channel(tx_channel));
+	if (err)
+		return 1;
 
-	info(TAG, "teardown()");
+	err = CE(encoder->del(encoder));
+	if (err)
+		return 1;
+
+	next_schedule = 0;
 
 	return 0;
 }
 
-void transmit_signal(frame_info_t *frame)
+static int transmit_signal(frame_info_t *frame)
 {
 	int err = 0;
 	rmt_transmit_config_t conf = { 0 };
@@ -109,10 +127,14 @@ void transmit_signal(frame_info_t *frame)
 	if (err)
 		die(TAG, "invalid lldat found");
 
-	RS(rmt_transmit(tx_channel, encoder, frame, ~0, &conf));
+	err = rmt_transmit(tx_channel, encoder, frame, ~0, &conf);
+	if (err)
+		return 1;
+
+	return 0;
 }
 
-static int is_auto_controllable(void)
+static int is_schedule_signallable(void)
 {
 	static size_t count;
 
@@ -126,7 +148,7 @@ static int is_auto_controllable(void)
 	return 1;
 }
 
-static void goto_next_schedule(void)
+static void move_schedule_next(void)
 {
 	if (next_schedule + 1 == sizeof(schedules))
 		next_schedule = 0;
@@ -134,29 +156,33 @@ static void goto_next_schedule(void)
 		next_schedule++;
 }
 
-enum action_state auto_control(void)
+enum action_result schedule_signal(void)
 {
 	const struct signal_schedule *schedule = &schedules[next_schedule];
 	u64 ts = schedule->start, now = get_seconds_of_day();
 
-	if (!is_auto_controllable() || schedule->start > now) {
-		return ACTION_AGIN;
+	if (!is_schedule_signallable() || schedule->start > now) {
+		return EXEC_AGAIN;
 	} else if (schedule->start < now - 5) {
-		goto_next_schedule();
+		move_schedule_next();
 		info(TAG, "skipped a schedule set for " HH_MM_SS,
 		     sec_to_hour_d(ts), sec_to_min_d(ts), sec_to_sec_d(ts));
-		return ACTION_RETY;
+		return EXEC_RETRY;
 	}
 
 	size_t i;
-	for_each_idx(i, schedule->fnum)
-		transmit_signal(schedule->frame);
+	int err;
+	for_each_idx(i, schedule->fnum) {
+		err = transmit_signal(schedule->frame);
+		if (err)
+			return EXEC_ERROR;
+	}
 
-	goto_next_schedule();
+	move_schedule_next();
 
 	ts = schedules[next_schedule].start;
 	info(TAG, "next schedule is set to run at " HH_MM_SS,
 	     sec_to_hour_d(ts), sec_to_min_d(ts), sec_to_sec_d(ts));
 
-	return ACTION_DONE;
+	return EXEC_AGAIN;
 }

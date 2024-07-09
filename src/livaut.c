@@ -24,7 +24,7 @@
 #include "sign.h"
 #include "debug.h"
 #include "jumper.h"
-#include "run-action.h"
+#include "execute-action.h"
 #include "soc/gpio_num.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -32,25 +32,23 @@
 #include "nvs.h"
 #include "sntp.h"
 
-DEFINE_ACTION_SIGNATURE(auto_control);
-DEFINE_ACTION_SIGNATURE(receive_signal);
+ACTION_DECLARATION(schedule_signal);
+ACTION_DECLARATION(receive_signal);
 
-static const struct action_info actions[] = {
-	ACTION(auto_control,   GPIO_NUM_32, GPIO_NUM_26),
-	ACTION(receive_signal, GPIO_NUM_32, GPIO_NUM_25),
-	ACTION_TAIL(),
+static const struct action actions[] = {
+	ACT(schedule_signal,   GPIO_NUM_32, GPIO_NUM_26),
+	ACT(receive_signal, GPIO_NUM_32, GPIO_NUM_25),
+	ACT_END(),
 };
 
 void at_sta2ap_connect(int err)
 {
 	if (err) {
 		release_nvs_flash();
-		return;
+	} else {
+		config_sntp_service();
+		start_sntp_service();
 	}
-
-	config_sntp_service();
-
-	start_sntp_service();
 }
 
 void app_main(void)
@@ -63,8 +61,8 @@ void app_main(void)
 
 	collaborate_timezone();
 
-	xTaskCreate(make_sta2ap_connection, "wifi_init", 2048,
-		    at_sta2ap_connect, 10, NULL);
+	xTaskCreate(make_sta2ap_connection, "wifi_setup", 2048,
+		    at_sta2ap_connect, 5, NULL);
 
 setup_jumper:
 	config_jumper();
@@ -81,6 +79,6 @@ setup_jumper:
 		uninstall_mst_bus();
 
 do_action:
-	xTaskCreate(exec_action_task, "action_exec", 4096,
+	xTaskCreate(execute_action, "action_exec", 4096,
 		    (void *)actions, 15, NULL);
 }

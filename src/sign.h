@@ -40,4 +40,6 @@ int init_sign(void);
 
 int show_sign(u8 code);
 
+#define inverse_sign(s) (*(s) ^= 0xFF)
+
 #endif /* SIGN_H */

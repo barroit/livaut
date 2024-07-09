@@ -31,7 +31,7 @@
 enum decoder_state {
 	DEC_DONE,
 	DEC_SKIP,
-	DEC_ERRO,
+	DEC_ERROR,
 };
 
 enum decoder_state decode_aeha_symbols(rmt_symbol_word_t *s, size_t n,
