@@ -24,8 +24,6 @@
 #include "nvs_flash.h"
 #include "termio.h"
 
-#define RS ESP_ERROR_CHECK
-
 #define TAG "nvs_flash"
 
 int init_nvs_flash(void)
@@ -35,18 +33,25 @@ int init_nvs_flash(void)
 	err = nvs_flash_init();
 	if (err == ESP_ERR_NVS_NO_FREE_PAGES ||
 	    err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-		RS(nvs_flash_erase());
+		err = CE(nvs_flash_erase());
+		if (err)
+			return 1;
+
 		err = nvs_flash_init();
 	}
 
+	CE(err);
+	if (err)
+		return 1;
+
 	info(TAG, "initialized");
 
-	return ESP_ERROR_CHECK_WITHOUT_ABORT(err);
+	return 0;
 }
 
 void release_nvs_flash(void)
 {
-	nvs_flash_deinit();
+	CE(nvs_flash_deinit());
 
 	info(TAG, "released");
 }

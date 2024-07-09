@@ -26,14 +26,16 @@
 #include "termio.h"
 #include "list.h"
 
-#define I2C_MASTER_SCL   22
-#define I2C_MASTER_SDA   21
+#define TAG "master_bus"
+
 #define I2C_GLITCH_THOLD 7
 
-static i2c_master_bus_handle_t mst_bus;
+static i2c_master_bus_handle_t master_bus;
 
 int install_mst_bus(void)
 {
+	int err;
+
 	FIELD_TYPEOF(i2c_master_bus_config_t, flags) flag = {
 		.enable_internal_pullup = true,
 	};
@@ -41,27 +43,28 @@ int install_mst_bus(void)
 	i2c_master_bus_config_t conf = {
 		.clk_source        = I2C_CLK_SRC_DEFAULT,
 		.i2c_port          = I2C_NUM_0,
-		.scl_io_num        = I2C_MASTER_SCL,
-		.sda_io_num        = I2C_MASTER_SDA,
+		.scl_io_num        = CONFIG_MASTER_BUS_SCL,
+		.sda_io_num        = CONFIG_MASTER_BUS_SDA,
 		.glitch_ignore_cnt = I2C_GLITCH_THOLD,
 		.flags             = flag,
 	};
 
-	if (i2c_new_master_bus(&conf, &mst_bus))
-		return warning("install_mst_bus()", "failed to initialize bus");
+	err = CE(i2c_new_master_bus(&conf, &master_bus));
+	if (err)
+		return 1;
 
 	return 0;
 }
 
-i2c_master_bus_handle_t get_mst_bus(void)
+i2c_master_bus_handle_t get_master_bus(void)
 {
-	return mst_bus;
+	return master_bus;
 }
 
-void uninstall_mst_bus(void)
+void uninstall_master_bus(void)
 {
-	i2c_del_master_bus(mst_bus);
-	mst_bus = NULL;
+	CE(i2c_del_master_bus(master_bus));
+	master_bus = NULL;
 }
 
 void bus_dev_scan_7bit(void)
@@ -70,12 +73,12 @@ void bus_dev_scan_7bit(void)
 	int found = 0;
 
 	for_each_idx(addr, 0x7F) {
-		if (i2c_master_probe(mst_bus, addr, 100) == ESP_OK) {
-			info("dev_scan", "found device at 0x%02x", addr);
+		if (i2c_master_probe(master_bus, addr, 100) == ESP_OK) {
+			info(TAG, "found device at 0x%02x", addr);
 			found = 1;
 		}
 	}
 
 	if (!found)
-		info("dev_scan", "no device was found one the bus");
+		info(TAG, "no device was found one the bus");
 }

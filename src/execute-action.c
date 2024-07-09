@@ -40,6 +40,7 @@ struct executor_context {
 	enum executor_state state;
 	const struct action *act;
 	u8 sign;
+	unsigned idles;
 };
 
 static const struct action *get_active_action(const struct action *act)
@@ -71,7 +72,7 @@ static int do_execute_action(const struct action *actions,
 		ctx->act = get_active_action(actions);
 		if (!ctx->act) {
 			run_spinner(&ctx->sign);
-			/* handle idle counter here */
+			ctx->idles++;
 			break;
 		}
 		ctx->state++;
@@ -126,5 +127,6 @@ void execute_action(void *actions)
 	while (39) {
 		if (do_execute_action(actions, &ctx))
 			abort();
+		// if (ctx.idles > ) //
 	}
 }

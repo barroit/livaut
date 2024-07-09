@@ -8,7 +8,4 @@ idf_component_register(SRCS ${livaut_source}
 
 add_compile_definitions(LIVAUT_DEBUG _POSIX_C_SOURCE=200809L)
 
-configure_file(../jumper.conf jumper-layout.h)
-configure_file(../wifi.conf wifi-cred.h)
-
 include(../schedule.cmake)

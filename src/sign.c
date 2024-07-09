@@ -26,32 +26,41 @@
 #include "driver/i2c_master.h"
 #include "types.h"
 
-#define EXPANDER_ADDR 0x20
-#define SCL_SPEED    100000
+#define SCL_SPEED 100000
 
 static i2c_master_dev_handle_t expander;
 
 int init_sign(void)
 {
-	i2c_master_bus_handle_t bus = get_mst_bus();
+	int err;
+
+	i2c_master_bus_handle_t bus = get_master_bus();
+	if (!bus)
+		return 1;
+
 	i2c_device_config_t conf = {
 		.dev_addr_length = I2C_ADDR_BIT_LEN_7,
-		.device_address  = EXPANDER_ADDR,
+		.device_address  = CONFIG_EXPANDER_ADDRESS,
 		.scl_speed_hz    = SCL_SPEED,
 	};
 
-	if (i2c_master_bus_add_device(bus, &conf, &expander))
-		return warning("init_sign()",
-			       "failed to initialize expander (address 0x%X)",
-			       EXPANDER_ADDR);
+	err = CE(i2c_master_bus_add_device(bus, &conf, &expander));
+	if (err)
+		return 1;
 
 	return 0;
 }
 
 int show_sign(u8 code)
 {
-	if (!expander || !get_mst_bus())
+	int err;
+
+	if (!expander || !get_master_bus())
 		return -1;
 
-	return i2c_master_transmit(expander, &code, 1, -1);
+	err = i2c_master_transmit(expander, &code, 1, -1);
+	if (err)
+		return 1;
+
+	return 0;
 }

@@ -31,12 +31,9 @@
 #include "freertos/task.h"
 #include "calc.h"
 
-#define CE ESP_ERROR_CHECK_WITHOUT_ABORT
-
-#define SYMBOL_BUFFER_SIZE   RMT_MBLK_SZ
-#define TRANSFER_QUEUE_DEPTH 4
-
 #define TAG "signal_schedule"
+
+#define TRANSFER_QUEUE_DEPTH 4
 
 static rmt_channel_handle_t tx_channel;
 static rmt_encoder_handle_t encoder;
@@ -45,10 +42,10 @@ static u8 next_schedule;
 static rmt_tx_channel_config_t get_chan_conf(void)
 {
 	rmt_tx_channel_config_t conf = {
-		.clk_src           = RMT_CLK_SRC,
-		.gpio_num          = GPIO_NUM_18,
-		.mem_block_symbols = RMT_MBLK_SZ,
-		.resolution_hz     = RMT_CLK_RES,
+		.clk_src           = RMT_CLOCK_SOURCE,
+		.gpio_num          = CONFIG_RMT_TX_GPIO,
+		.mem_block_symbols = RMT_MEMORY_BLOCK_SIZE,
+		.resolution_hz     = RMT_CLOCK_RESOLUTION,
 		.trans_queue_depth = TRANSFER_QUEUE_DEPTH,
 	};
 

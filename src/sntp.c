@@ -29,14 +29,13 @@
 
 #define TAG "sntp_service"
 
-#define NTP_SERVER "pool.ntp.org"
-#define TIMEZONE   "GMT-9"
+#define SNTP_DEFAULT_CONFIG ESP_NETIF_SNTP_DEFAULT_CONFIG
 
 static int is_service_started;
 
 void config_sntp_service(void)
 { 
-	esp_sntp_config_t conf = ESP_NETIF_SNTP_DEFAULT_CONFIG(NTP_SERVER);
+	esp_sntp_config_t conf = SNTP_DEFAULT_CONFIG(CONFIG_NTP_SERVER);
 	conf.start = false;
 
 	esp_netif_sntp_init(&conf);
@@ -50,9 +49,8 @@ int start_sntp_service(void)
 
 	err = esp_netif_sntp_sync_wait(pdMS_TO_TICKS(10000));
 	if (err) {
-		warning(TAG,
-			"failed to synchronize system time from %s",
-			NTP_SERVER);
+		warning(TAG, "failed to synchronize system time from %s",
+			CONFIG_NTP_SERVER);
 		return 1;
 	}
 
@@ -67,7 +65,7 @@ int start_sntp_service(void)
 
 void collaborate_timezone(void)
 {
-	setenv("TZ", TIMEZONE, 1);
+	setenv("TZ", CONFIG_LOCAL_TIMEZONE, 1);
 	tzset();
 }
 

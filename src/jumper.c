@@ -30,63 +30,76 @@
 #include "termio.h"
 #include "calc.h"
 
-static const u8 jumper_output[] = { JUMPER_HIGH };
-static const u8 jumper_input[]  = { JUMPER_LOW };
+#define TAG "jumper"
 
-static u64 get_pin_bitmap(const u8 *pins, size_t n)
+static const u8 output_jumper[] = {
+	CONFIG_JUMPER_OUTPUT,
+};
+
+static const u8 input_jumper[]  = {
+	CONFIG_JUMPER_INPUT_1,
+	CONFIG_JUMPER_INPUT_2,
+	CONFIG_JUMPER_INPUT_3,
+	CONFIG_JUMPER_INPUT_4,
+	CONFIG_JUMPER_INPUT_5
+};
+
+static u64 get_pin_bitmap(const u8 *js, size_t n)
 {
 	size_t i;
 	u64 bitmap = 0;
 
 	for_each_idx(i, n)
-		bitmap |= pin_bit_mask(pins[i]);
+		bitmap |= pin_bit_mask(js[i]);
 
 	return bitmap;
 }
 
-static void config_jumper_output_gpio(u64 pins)
+static gpio_config_t get_out_conf(u64 pin)
 {
 	gpio_config_t conf = {
 		.intr_type    = GPIO_INTR_DISABLE,
 		.mode         = GPIO_MODE_OUTPUT,
 		.pull_up_en   = GPIO_PULLUP_DISABLE,
 		.pull_down_en = GPIO_PULLDOWN_DISABLE,
-		.pin_bit_mask = pins,
+		.pin_bit_mask = pin,
 	};
 
-	ESP_ERROR_CHECK(gpio_config(&conf));
+	return conf;
 }
 
-static void config_jumper_input_gpio(u64 pins)
+static gpio_config_t get_in_conf(u64 pin)
 {
 	gpio_config_t conf = {
 		.intr_type    = GPIO_INTR_DISABLE,
 		.mode         = GPIO_MODE_INPUT,
 		.pull_up_en   = GPIO_PULLUP_ENABLE,
 		.pull_down_en = GPIO_PULLDOWN_DISABLE,
-		.pin_bit_mask = pins,
+		.pin_bit_mask = pin,
 	};
 
-	ESP_ERROR_CHECK(gpio_config(&conf));
+	return conf;
 }
 
 void config_jumper(void)
 {
-	u64 out = get_pin_bitmap(jumper_output, sizeof(jumper_output)),
-	    in = get_pin_bitmap(jumper_input, sizeof(jumper_input));
+	u64 output = get_pin_bitmap(output_jumper, sizeof(output_jumper));
+	u64 input = get_pin_bitmap(input_jumper, sizeof(input_jumper));
 
-	config_jumper_output_gpio(out);
-	config_jumper_input_gpio(in);
+	gpio_config_t out_conf = get_out_conf(output);
+	gpio_config(&out_conf);
+
+	gpio_config_t in_conf = get_in_conf(input);
+	gpio_config(&in_conf);
 }
 
-static int is_input_gpio(u8 j)
+static int is_valid_jumper(const u8 *js, size_t n, u8 j)
 {
 	size_t i;
-
-	for_each_idx(i, sizeof(jumper_input))
-		if (jumper_input[i] == j)
+	for_each_idx(i, n) {
+		if (js[i] == j)
 			return 1;
-
+	}
 	return 0;
 }
 
@@ -98,15 +111,10 @@ static int is_gpio_connected(u8 j1, u8 j2, u32 lv)
 
 int is_jumper_set(u8 j1, u8 j2)
 {
-	if (!is_input_gpio(j2))
-		die("is_jumper_set()", "j2 %" PRIu8 " is not a input gpio",
-		    j2);
+	if (!is_valid_jumper(output_jumper, sizeof(output_jumper), j1))
+		die(TAG, "j1 %" PRIu8 " is not a output jumper", j1);
+	else if (!is_valid_jumper(input_jumper, sizeof(input_jumper), j2))
+		die(TAG, "j2 %" PRIu8 " is not a input jumper", j2);
 
-	if (!is_gpio_connected(j1, j2, 1))
-		return 0;
-
-	if (!is_gpio_connected(j1, j2, 0))
-		return 0;
-
-	return 1;
+	return is_gpio_connected(j1, j2, 1) && is_gpio_connected(j1, j2, 0);
 }

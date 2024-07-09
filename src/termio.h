@@ -30,8 +30,6 @@
 
 void print_frame_dump(const u8 *bitmap, size_t n);
 
-void print_checksum(const u8 *bitmap, size_t n);
-
 #define die(t, f, ...)				\
 	do {					\
 		ESP_LOGE(t, f, ##__VA_ARGS__);	\
@@ -56,5 +54,7 @@ void print_checksum(const u8 *bitmap, size_t n);
 void print_task_avail_stack(const char *tag, void *tsk);
 
 #define HH_MM_SS "%02" PRIu64 ":%02" PRIu64 ":%02" PRIu64
+
+#define CE ESP_ERROR_CHECK_WITHOUT_ABORT
 
 #endif /* TERMIO_H */

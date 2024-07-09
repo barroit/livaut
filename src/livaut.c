@@ -76,7 +76,7 @@ setup_jumper:
 
 	err = init_sign();
 	if (err)
-		uninstall_mst_bus();
+		uninstall_master_bus();
 
 do_action:
 	xTaskCreate(execute_action, "action_exec", 4096,

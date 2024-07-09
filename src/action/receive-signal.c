@@ -34,16 +34,12 @@
 #include <string.h>
 
 /* fuck these damn long name */
-#define CE ESP_ERROR_CHECK_WITHOUT_ABORT
-
 #define rmt_rx_register_callback rmt_rx_register_event_callbacks
-
-#define RX_GPIO GPIO_NUM_19
 
 static rmt_channel_handle_t rx_channel;
 static QueueHandle_t incoming_symbols;
 
-static rmt_symbol_word_t rmt_symbols[RMT_MBLK_SZ];
+static rmt_symbol_word_t rmt_symbols[RMT_MEMORY_BLOCK_SIZE];
 static rmt_receive_config_t rmt_config;
 
 static int receive_result;
@@ -84,16 +80,16 @@ static void IRAM_ATTR receive_first_signal(void *)
 		next_interv_idx = !idx;
 	}
 
-	gpio_intr_disable(RX_GPIO);
+	gpio_intr_disable(CONFIG_RMT_RX_GPIO);
 }
 
 static rmt_rx_channel_config_t get_chan_conf(void)
 {
 	rmt_rx_channel_config_t conf = {
-		.gpio_num          = RX_GPIO,
-		.clk_src           = RMT_CLK_SRC,
-		.resolution_hz     = RMT_CLK_RES,
-		.mem_block_symbols = RMT_MBLK_SZ,
+		.gpio_num          = CONFIG_RMT_RX_GPIO,
+		.clk_src           = RMT_CLOCK_SOURCE,
+		.resolution_hz     = RMT_CLOCK_RESOLUTION,
+		.mem_block_symbols = RMT_MEMORY_BLOCK_SIZE,
 	};
 
 	return conf;
@@ -137,13 +133,13 @@ static int setup_gpio_intr(void)
 	if (err)
 		return 1;
 
-	err = CE(gpio_isr_handler_add(RX_GPIO, receive_first_signal, NULL));
+	err = CE(gpio_isr_handler_add(CONFIG_RMT_RX_GPIO, receive_first_signal, NULL));
 	if (err)
 		return 1;
 
-	gpio_set_intr_type(RX_GPIO, GPIO_INTR_NEGEDGE);
+	gpio_set_intr_type(CONFIG_RMT_RX_GPIO, GPIO_INTR_NEGEDGE);
 
-	gpio_intr_enable(RX_GPIO);
+	gpio_intr_enable(CONFIG_RMT_RX_GPIO);
 
 	return 0;
 }
@@ -190,9 +186,9 @@ int receive_signal_teardown(void)
 	if (err)
 		return 1;
 
-	gpio_intr_disable(RX_GPIO);
+	gpio_intr_disable(CONFIG_RMT_RX_GPIO);
 
-	err = CE(gpio_isr_handler_remove(RX_GPIO));
+	err = CE(gpio_isr_handler_remove(CONFIG_RMT_RX_GPIO));
 	if (err)
 		return 1;
 
@@ -244,7 +240,7 @@ enum action_result receive_signal(void)
 		return EXEC_RETRY;
 	}
 
-	gpio_intr_enable(RX_GPIO);
+	gpio_intr_enable(CONFIG_RMT_RX_GPIO);
 
 	u8 *signals;
 	size_t sigsz;

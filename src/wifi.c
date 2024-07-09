@@ -5,9 +5,9 @@
 #include <string.h>
 #include "termio.h"
 
-#define CE ESP_ERROR_CHECK_WITHOUT_ABORT
+#define RETRY_GIVEUP 5
 
-#define MAXIMUM_RETRY 5
+#define MINIMAL_AP_RSSI -60
 
 #define STA2AP_START_FAILURE BIT1
 #define STA2AP_START_SUCCESS BIT0
@@ -39,7 +39,7 @@ static void handle_wifi_event(void *, esp_event_base_t, int32_t id, void *)
 			break;
 		}
 
-		if (retry_count++ < MAXIMUM_RETRY) {
+		if (retry_count++ < RETRY_GIVEUP) {
 			if (retry_count % 2)
 				info(TAG, "trying to connect to ‘%s’",
 				     WIFI_SSID);
@@ -109,13 +109,15 @@ static int setup_sta_config(void)
 		return 1;
 
 	wifi_scan_threshold_t thre_conf = {
+		.rssi     = MINIMAL_AP_RSSI,
 		.authmode = WIFI_AUTH_WPA3_PSK,
 	};
 
 	wifi_sta_config_t sta_conf = {
-		.ssid      = WIFI_SSID,
-		.password  = WIFI_PASS,
-		.threshold = thre_conf,
+		.ssid            = CONFIG_WIFI_SSID,
+		.password        = CONFIG_WIFI_PASS,
+		.threshold       = thre_conf,
+		.sort_method     = WIFI_CONNECT_AP_BY_SECURITY,
 	};
 
 	wifi_config_t wifi_conf = {

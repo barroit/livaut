@@ -25,8 +25,8 @@
 
 #include "soc/clk_tree_defs.h"
 
-#define RMT_CLK_RES 1000000             /* clock resolution, 1 µs */
-#define RMT_CLK_SRC RMT_CLK_SRC_DEFAULT
-#define RMT_MBLK_SZ 256                 /* memory block size */
+#define RMT_CLOCK_RESOLUTION  1000000
+#define RMT_CLOCK_SOURCE      RMT_CLK_SRC_APB
+#define RMT_MEMORY_BLOCK_SIZE 256
 
 #endif /* RMT_H */

@@ -1,0 +1,85 @@
+menu "WiFi Credential"
+
+config WIFI_SSID
+	string "WiFi SSID"
+	help
+	  SSID (network name) for the sta to connect to.
+
+config WIFI_PASS
+	string "WiFi Password"
+	help
+	  WiFi password (WPA3) for the sta to use.
+
+endmenu # "WiFi Credential"
+
+menu "Jumper layout"
+
+config JUMPER_OUTPUT
+	int "output jumper"
+	default 32
+	help
+	  This jumper will send high and low levels to the input jumper(s)
+
+config JUMPER_INPUT_1
+	int "input jumper 1"
+	default 25
+	help
+	  This jumper will receive high and low levels from the output jumper
+
+config JUMPER_INPUT_2
+	int "input jumper 2"
+	default 26
+
+config JUMPER_INPUT_3
+	int "input jumper 3"
+	default 27
+
+config JUMPER_INPUT_4
+	int "input jumper 4"
+	default 14
+
+config JUMPER_INPUT_5
+	int "input jumper 5"
+	default 12
+
+endmenu # "Jumper layout"
+
+menu "I2C bus"
+
+config MASTER_BUS_SCL
+	int "master bus scl"
+	default 22
+
+config MASTER_BUS_SDA
+	int "master bus sda"
+	default 21
+
+config EXPANDER_ADDRESS
+	hex "expander address"
+	default 0x20
+
+endmenu # "I2C bus"
+
+menu "Time service"
+
+config NTP_SERVER
+	string "ntp server"
+	default "pool.ntp.org"
+
+config LOCAL_TIMEZONE
+	string "time zone"
+	default "jst-9"
+
+endmenu # "Time service"
+
+menu "RMT"
+
+config RMT_TX_GPIO
+	int "tx channel gpio"
+	default 18
+
+config RMT_RX_GPIO
+	int "rx channel gpio"
+	default 19
+
+endmenu # "RMT"

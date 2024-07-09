@@ -27,9 +27,9 @@
 
 int install_mst_bus(void);
 
-i2c_master_bus_handle_t get_mst_bus(void);
+i2c_master_bus_handle_t get_master_bus(void);
 
-void uninstall_mst_bus(void);
+void uninstall_master_bus(void);
 
 void bus_dev_scan_7bit(void);
 
