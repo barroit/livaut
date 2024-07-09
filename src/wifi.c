@@ -1,7 +1,6 @@
 #include "wifi.h"
 #include "esp_wifi.h"
 #include "freertos/event_groups.h"
-#include "wifi-cred.h"
 #include <string.h>
 #include "termio.h"
 
@@ -22,7 +21,6 @@ static size_t retry_count;
 static int is_disconnect_call;
 
 static int is_communicating;
-static int is_sta2ap_inited;
 static char router_address[16];
 
 #define TAG "wifi_init"
@@ -40,9 +38,10 @@ static void handle_wifi_event(void *, esp_event_base_t, int32_t id, void *)
 		}
 
 		if (retry_count++ < RETRY_GIVEUP) {
-			if (retry_count % 2)
+			if (retry_count % 2) {
 				info(TAG, "trying to connect to ‘%s’",
-				     WIFI_SSID);
+				     CONFIG_WIFI_SSID);
+			}
 			esp_wifi_connect();
 		} else {
 			xEventGroupSetBits(sta2ap_state, STA2AP_START_FAILURE);
@@ -162,7 +161,6 @@ static int init_sta(void)
 	if(err)
 		goto err_wifi_set_conf;
 
-	is_sta2ap_inited = 1;
 	return 0;
 
 err_wifi_set_conf:
@@ -182,9 +180,10 @@ int is_sta2ap_connected(void)
 
 void disconnect_sta2ap(void)
 {
-	esp_wifi_disconnect();
-	esp_wifi_stop();
 	is_disconnect_call = 1;
+	esp_wifi_disconnect();
+
+	esp_wifi_stop();
 	is_communicating = 0;
 }
 
@@ -201,7 +200,7 @@ int connect_sta2ap(void)
 	xEventGroupClearBits(sta2ap_state, STA2AP_STATES);
 
 	if (bit != STA2AP_START_SUCCESS) {
-		warning(TAG, "unable to connect to ‘%s’", WIFI_SSID);
+		warning(TAG, "unable to connect to ‘%s’", CONFIG_WIFI_SSID);
 		goto err_wifi_connect;
 	}
 
@@ -219,6 +218,9 @@ typedef void (*setup_wifi_task_cb)(int err);
 void make_sta2ap_connection(void *cb)
 {
 	int err;
+
+	if (*CONFIG_WIFI_SSID == 0 || *CONFIG_WIFI_PASS == 0)
+		warning(TAG, "empty ssid or pass");
 
 	err = init_sta();
 	if (err)

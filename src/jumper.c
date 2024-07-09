@@ -21,7 +21,6 @@
 ****************************************************************************/
 
 #include "jumper.h"
-#include "jumper-layout.h"
 #include "list.h"
 #include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
@@ -29,14 +28,16 @@
 #include "types.h"
 #include "termio.h"
 #include "calc.h"
+#include "power.h"
+#include "memory.h"
 
 #define TAG "jumper"
 
-static const u8 output_jumper[] = {
+static const u8 output_jumpers[] = {
 	CONFIG_JUMPER_OUTPUT,
 };
 
-static const u8 input_jumper[]  = {
+static const u8 input_jumpers[]  = {
 	CONFIG_JUMPER_INPUT_1,
 	CONFIG_JUMPER_INPUT_2,
 	CONFIG_JUMPER_INPUT_3,
@@ -50,7 +51,7 @@ static u64 get_pin_bitmap(const u8 *js, size_t n)
 	u64 bitmap = 0;
 
 	for_each_idx(i, n)
-		bitmap |= pin_bit_mask(js[i]);
+		bitmap |= gpio_bit_mask(js[i]);
 
 	return bitmap;
 }
@@ -81,16 +82,55 @@ static gpio_config_t get_in_conf(u64 pin)
 	return conf;
 }
 
-void config_jumper(void)
+size_t get_output_jumper(const u8 **j)
 {
-	u64 output = get_pin_bitmap(output_jumper, sizeof(output_jumper));
-	u64 input = get_pin_bitmap(input_jumper, sizeof(input_jumper));
+	*j = output_jumpers;
+	return sizeof_array(output_jumpers);
+}
 
-	gpio_config_t out_conf = get_out_conf(output);
+size_t get_input_jumper(const u8 **j)
+{
+	*j = input_jumpers;
+	return sizeof_array(input_jumpers);
+}
+
+u64 get_jumper_output_bitmap(void)
+{
+	return get_pin_bitmap(output_jumpers, sizeof_array(output_jumpers));
+}
+
+u64 get_jumper_input_bitmap(void)
+{
+	return get_pin_bitmap(input_jumpers, sizeof_array(input_jumpers));
+}
+
+int config_jumper(void)
+{
+	int err;
+
+	err = verify_wakeup_jumper(output_jumpers,
+				   sizeof_array(output_jumpers));
+	if (err)
+		goto err_wkup_jmpr;
+
+	err = verify_wakeup_jumper(input_jumpers,
+				   sizeof_array(input_jumpers));
+	if (err)
+		goto err_wkup_jmpr;
+
+	u64 outmask = get_jumper_output_bitmap();
+	gpio_config_t out_conf = get_out_conf(outmask);
 	gpio_config(&out_conf);
 
-	gpio_config_t in_conf = get_in_conf(input);
+	u64 inmask = get_jumper_input_bitmap();
+	gpio_config_t in_conf = get_in_conf(inmask);
 	gpio_config(&in_conf);
+
+	return 0;
+
+err_wkup_jmpr:
+	error(TAG, "‘%d’ is not a valid rtc gpio", err);
+	return 1;
 }
 
 static int is_valid_jumper(const u8 *js, size_t n, u8 j)
@@ -111,10 +151,17 @@ static int is_gpio_connected(u8 j1, u8 j2, u32 lv)
 
 int is_jumper_set(u8 j1, u8 j2)
 {
-	if (!is_valid_jumper(output_jumper, sizeof(output_jumper), j1))
-		die(TAG, "j1 %" PRIu8 " is not a output jumper", j1);
-	else if (!is_valid_jumper(input_jumper, sizeof(input_jumper), j2))
-		die(TAG, "j2 %" PRIu8 " is not a input jumper", j2);
+	int pass;
+
+	pass = is_valid_jumper(output_jumpers,
+			       sizeof_array(output_jumpers), j1);
+	if (!pass)
+		die(TAG, "j1 %" PRIu8 " is not an output jumper", j1);
+
+	pass = is_valid_jumper(input_jumpers,
+			       sizeof_array(input_jumpers), j2);
+	if (!pass)
+		die(TAG, "j2 %" PRIu8 " is not an input jumper", j2);
 
 	return is_gpio_connected(j1, j2, 1) && is_gpio_connected(j1, j2, 0);
 }

@@ -34,7 +34,7 @@
 static int is_service_started;
 
 void config_sntp_service(void)
-{ 
+{
 	esp_sntp_config_t conf = SNTP_DEFAULT_CONFIG(CONFIG_NTP_SERVER);
 	conf.start = false;
 

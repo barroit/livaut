@@ -270,7 +270,7 @@ static int reset_encoder(rmt_encoder_t *container)
 static int make_encoder_context(struct encoder_context **ctx)
 {
 	/* rmt_alloc_encoder_mem uses calloc() */
-	*ctx = rmt_alloc_encoder_mem(sizeof(struct encoder_context));
+	*ctx = rmt_alloc_encoder_mem(sizeof(**ctx));
 	if (!*ctx)
 		return ESP_ERR_NO_MEM;
 

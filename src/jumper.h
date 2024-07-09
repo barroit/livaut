@@ -25,8 +25,16 @@
 
 #include "types.h"
 
-void config_jumper(void);
+int config_jumper(void);
 
 int is_jumper_set(u8 j1, u8 j2);
+
+size_t get_output_jumper(const u8 **j);
+
+size_t get_input_jumper(const u8 **j);
+
+u64 get_jumper_output_bitmap(void);
+
+u64 get_jumper_input_bitmap(void);
 
 #endif /* JUMPER_H */

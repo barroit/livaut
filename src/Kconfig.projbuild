@@ -1,3 +1,5 @@
+menu "BR config"
+
 menu "WiFi Credential"
 
 config WIFI_SSID
@@ -83,3 +85,27 @@ config RMT_RX_GPIO
 	default 19
 
 endmenu # "RMT"
+
+menu "Power management"
+
+config EXECUTOR_IDLE_TIME
+	int "executor idle time"
+	default 50
+	help
+	  executor will enter deep sleep when it reaches this idle times
+
+endmenu # "Power management"
+
+menu "Signal scheduler"
+
+config SCHEDULER_SUSPEND_DELAY
+	int "scheduler sleep delay(in seconds)"
+	default 240
+
+config SCHEDULER_SUSPEND_LIMIT
+	int "maximum deep sleep time(in minutes)"
+	default 240
+
+endmenu # "Signal scheduler"
+
+endmenu # "BR config"

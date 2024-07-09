@@ -31,6 +31,7 @@
 #include "wifi.h"
 #include "nvs.h"
 #include "sntp.h"
+#include "power.h"
 
 ACTION_DECLARATION(schedule_signal);
 ACTION_DECLARATION(receive_signal);
@@ -61,11 +62,13 @@ void app_main(void)
 
 	collaborate_timezone();
 
-	xTaskCreate(make_sta2ap_connection, "wifi_setup", 2048,
+	xTaskCreate(make_sta2ap_connection, "wifi_setup", 4096,
 		    at_sta2ap_connect, 5, NULL);
 
 setup_jumper:
-	config_jumper();
+	err = config_jumper();
+	if (err)
+		start_deep_sleep();
 
 	err = install_mst_bus();
 	if (err)

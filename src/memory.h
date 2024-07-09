@@ -63,4 +63,6 @@ static inline void *xrealloc(void *p, size_t n)
 		}						\
 	} while (0)
 
+#define sizeof_array(a) (sizeof(a) / sizeof(*(a)))
+
 #endif /* MEMORY_H */

@@ -23,4 +23,14 @@
 #ifndef POWER_H
 #define POWER_H
 
+#include "types.h"
+
+int verify_wakeup_jumper(const u8 *js, size_t j);
+
+void setup_external_wakeup(void);
+
+void setup_timer_wakeup(u64 seconds);
+
+void start_deep_sleep(void);
+
 #endif /* POWER_H */

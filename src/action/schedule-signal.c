@@ -30,6 +30,9 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "calc.h"
+#include "power.h"
+#include "memory.h"
+#include "esp_attr.h"
 
 #define TAG "signal_schedule"
 
@@ -37,7 +40,12 @@
 
 static rmt_channel_handle_t tx_channel;
 static rmt_encoder_handle_t encoder;
-static u8 next_schedule;
+
+/*
+ * these need to be kept during deep sleep
+ */
+static RTC_DATA_ATTR u8 next_schedule;
+static RTC_DATA_ATTR int is_today_finished;
 
 static rmt_tx_channel_config_t get_chan_conf(void)
 {
@@ -145,25 +153,60 @@ static int is_schedule_signallable(void)
 	return 1;
 }
 
-static void move_schedule_next(void)
+static void update_next_schedule(void)
 {
-	if (next_schedule + 1 == sizeof(schedules))
+	if (next_schedule + 1 == sizeof_array(schedules)) {
 		next_schedule = 0;
-	else
+		is_today_finished = 1;
+	} else {
 		next_schedule++;
+	}
+}
+
+static inline int should_deep_sleep(u64 seconds)
+{
+	return seconds >= CONFIG_SCHEDULER_SUSPEND_DELAY;
+}
+
+static void handle_suspend(u64 seconds)
+{
+	u64 limit = st_mult(CONFIG_SCHEDULER_SUSPEND_LIMIT, 60);
+	if (seconds > limit)
+		seconds = limit;
+	else
+		seconds -= CONFIG_SCHEDULER_SUSPEND_DELAY / 2;
+
+	setup_timer_wakeup(seconds);
+	start_deep_sleep();
 }
 
 enum action_result schedule_signal(void)
 {
+	if (!is_schedule_signallable())
+		return EXEC_AGAIN;
+
 	const struct signal_schedule *schedule = &schedules[next_schedule];
 	u64 ts = schedule->start, now = get_seconds_of_day();
 
-	if (!is_schedule_signallable() || schedule->start > now) {
+	if (now < schedule->start) {
+		if (is_today_finished)
+			is_today_finished = 0;
+
+		u64 time = schedule->start - now;
+
+		if (should_deep_sleep(time))
+			handle_suspend(time);
+
 		return EXEC_AGAIN;
-	} else if (schedule->start < now - 5) {
-		move_schedule_next();
+	} else if (is_today_finished) {
+		handle_suspend(st_mult(CONFIG_SCHEDULER_SUSPEND_LIMIT, 60));
+		return EXEC_AGAIN;
+	} else if (now > schedule->start + 5) {
+		update_next_schedule();
+
 		info(TAG, "skipped a schedule set for " HH_MM_SS,
 		     sec_to_hour_d(ts), sec_to_min_d(ts), sec_to_sec_d(ts));
+
 		return EXEC_RETRY;
 	}
 
@@ -175,7 +218,7 @@ enum action_result schedule_signal(void)
 			return EXEC_ERROR;
 	}
 
-	move_schedule_next();
+	update_next_schedule();
 
 	ts = schedules[next_schedule].start;
 	info(TAG, "next schedule is set to run at " HH_MM_SS,

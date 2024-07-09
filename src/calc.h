@@ -38,16 +38,15 @@
 
 #define uint_mult_overflows(a, b) ((a) && ((b) > (max_uint_val(a) / (a))))
 
-static inline size_t st_mult(size_t a, size_t b)
-{
-	if (!uint_mult_overflows(a, b))
-		return a * b;
+#define st_mult(a, b)							\
+	({								\
+		if (uint_mult_overflows(a, b))				\
+			die("st_mult()", "size overflow (%llu * %llu)",	\
+			    (uintmax_t)a, (uintmax_t)b);		\
+		a * b;							\
+	})
 
-	die("st_mult()", "size overflow (%" PRIuMAX " * %" PRIuMAX ")",
-	    (uintmax_t)a, (uintmax_t)b);
-}
-
-#define pin_bit_mask(p) (1ULL << (p))
+#define gpio_bit_mask(p) (1ULL << (p))
 
 #define sec_to_hour_d(s) (s / 3600)
 #define sec_to_min_d(s)  ((s % 3600) / 60)

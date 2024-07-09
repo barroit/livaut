@@ -28,6 +28,7 @@
 #include "freertos/task.h"
 #include "sign.h"
 #include "termio.h"
+#include "power.h"
 
 enum executor_state {
 	EXECUTOR_INIT,
@@ -80,7 +81,7 @@ static int do_execute_action(const struct action *actions,
 	case EXECUTOR_SETUP:
 		err = ctx->act->setup();
 		if (err)
-			goto handle_error;
+			return 1;
 		ctx->state++;
 		info(ctx->act->name, "configured");
 		/* FALLTHRU */
@@ -88,7 +89,7 @@ static int do_execute_action(const struct action *actions,
 		spec = ctx->act->handle();
 		switch (spec) {
 		case EXEC_ERROR:
-			goto handle_error;
+			return 1;
 		case EXEC_AGAIN:
 			run_spinner(&ctx->sign);
 			goto prepare_next;
@@ -102,7 +103,7 @@ static int do_execute_action(const struct action *actions,
 	case EXECUTOR_TEARDOWN:
 		err = ctx->act->teardown();
 		if (err)
-			goto handle_error;
+			return 1;
 		info(ctx->act->name, "cleaned");
 
 		ctx->act = NULL;
@@ -112,10 +113,6 @@ static int do_execute_action(const struct action *actions,
 prepare_next:
 	vTaskDelay(pdMS_TO_TICKS(1500));
 	return 0;
-
-handle_error:
-	show_sign(SIGN_OFF);
-	return 1;
 }
 
 void execute_action(void *actions)
@@ -126,7 +123,11 @@ void execute_action(void *actions)
 
 	while (39) {
 		if (do_execute_action(actions, &ctx))
-			abort();
-		// if (ctx.idles > ) //
+			start_deep_sleep();
+
+		if (ctx.idles > CONFIG_EXECUTOR_IDLE_TIME) {
+			setup_external_wakeup();
+			start_deep_sleep();
+		}
 	}
 }
