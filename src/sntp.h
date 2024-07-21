@@ -32,6 +32,8 @@ int start_sntp_service(void);
 /* do not call this function in task */
 void collaborate_timezone(void);
 
+u8 get_day_of_week(void);
+
 u64 get_seconds_of_day(void);
 
 int is_sntp_started(void);

@@ -12,8 +12,18 @@
 # 		06 60 00 00 C3 00 00 56
 # An empty line is used to reset the parser state.
 
+# This specifies which days of the week the schedule is applied. 
+#	Mon	Tue	Wed	Thu	Fri	Sat	Sun
+on	 1	 1	 1	 1	 1	 0	 0
+
 08:00:00	2C 52
 		09 2C 25
+
+08:00:30	2C 52
+		09 2D 24
+
+08:01:00	2C 52
+		09 2E 27
 
 08:30:00	B  0  0  0  0  0
 25		11 DA 27 00

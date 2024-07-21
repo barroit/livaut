@@ -10,7 +10,7 @@
 				// make vscode run export.sh when its session
 				// starts. $IDF_PATH is not defined, the only
 				// solution is to specify path manually
-				"${HOME}/Source/esp-idf/components/**"
+				"${HOME}/source/esp-idf/components/**"
 			],
 			"defines": [
 				"SOC_PM_SUPPORT_EXT1_WAKEUP",

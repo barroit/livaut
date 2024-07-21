@@ -69,11 +69,21 @@ void collaborate_timezone(void)
 	tzset();
 }
 
-u64 get_seconds_of_day(void)
+static struct tm *get_tm_now(void)
 {
 	time_t now = time(NULL);
-	struct tm *t = localtime(&now);
+	return localtime(&now);
+}
 
+u8 get_day_of_week(void)
+{
+	struct tm *t = get_tm_now();
+	return 128 >> t->tm_wday;
+}
+
+u64 get_seconds_of_day(void)
+{
+	struct tm *t = get_tm_now();
 	return (t->tm_hour * 3600) + (t->tm_min * 60) + t->tm_sec;
 }
 

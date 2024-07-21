@@ -121,7 +121,7 @@ int schedule_signal_teardown(void)
 	return 0;
 }
 
-static int transmit_signal(frame_info_t *frame)
+/* used by test-signal */ int transmit_signal(frame_info_t *frame)
 {
 	int err = 0;
 	rmt_transmit_config_t conf = { 0 };
@@ -168,9 +168,14 @@ static inline int should_deep_sleep(u64 seconds)
 	return seconds >= CONFIG_SCHEDULER_SUSPEND_DELAY;
 }
 
+static inline u64 get_suspend_limit(void)
+{
+	return st_mult(CONFIG_SCHEDULER_SUSPEND_LIMIT, 60);
+}
+
 static void handle_suspend(u64 seconds)
 {
-	u64 limit = st_mult(CONFIG_SCHEDULER_SUSPEND_LIMIT, 60);
+	u64 limit = get_suspend_limit();
 	if (seconds > limit)
 		seconds = limit;
 	else
@@ -187,8 +192,12 @@ enum action_result schedule_signal(void)
 
 	const struct signal_schedule *schedule = &schedules[next_schedule];
 	u64 ts = schedule->start, now = get_seconds_of_day();
+	u8 day = get_day_of_week();
 
-	if (now < schedule->start) {
+	if (!(day & ondays)) {
+		u64 limit = get_suspend_limit();
+		handle_suspend(limit);
+	} else if (now < schedule->start) {
 		if (is_today_finished)
 			is_today_finished = 0;
 
@@ -213,7 +222,7 @@ enum action_result schedule_signal(void)
 	size_t i;
 	int err;
 	for_each_idx(i, schedule->fnum) {
-		err = transmit_signal(schedule->frame);
+		err = transmit_signal(&schedule->frame[i]);
 		if (err)
 			return EXEC_ERROR;
 	}
